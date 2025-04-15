@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Conda
+env/
+.conda/
+*.conda
+*.env
+*.venv
+
+# PyCharm
+.idea/
+*.iml
+
+# Virtual environments (на всякий случай)
+venv/
+ENV/
+.venv/
+
+# Logs and junk
+*.log
+*.sqlite3
+*.db
+*.bak
+*.swp
+.DS_Store
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Jupyter (если появятся)
+.ipynb_checkpoints/
+
+# Environment files (храним только .yml)
+.env
