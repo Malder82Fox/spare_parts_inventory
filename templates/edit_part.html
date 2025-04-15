@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Edit Part{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Edit Part: {{ part.name }}</h2>
+<form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+    <div class="mb-3">
+        <label for="sap_code" class="form-label">SAP Code</label>
+        <input type="text" class="form-control" name="sap_code" id="sap_code" value="{{ part.sap_code }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="part_number" class="form-label">Part Number</label>
+        <input type="text" class="form-control" name="part_number" id="part_number" value="{{ part.part_number }}">
+    </div>
+    <div class="mb-3">
+        <label for="name" class="form-label">Name</label>
+        <input type="text" class="form-control" name="name" id="name" value="{{ part.name }}" required>
+    </div>
+    <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <textarea class="form-control" name="description" id="description" rows="3">{{ part.description }}</textarea>
+    </div>
+    <div class="mb-3">
+        <label for="category" class="form-label">Category</label>
+        <input type="text" class="form-control" name="category" id="category" value="{{ part.category }}">
+    </div>
+    <div class="mb-3">
+        <label for="equipment_code" class="form-label">Equipment Code</label>
+        <input type="text" class="form-control" name="equipment_code" id="equipment_code" value="{{ part.equipment_code }}">
+    </div>
+    <div class="mb-3">
+        <label for="location" class="form-label">Storage Location</label>
+        <input type="text" class="form-control" name="location" id="location" value="{{ part.location }}">
+    </div>
+    <div class="mb-3">
+        <label for="manufacturer" class="form-label">Manufacturer</label>
+        <input type="text" class="form-control" name="manufacturer" id="manufacturer" value="{{ part.manufacturer }}">
+    </div>
+    <div class="mb-3">
+        <label for="analog_group" class="form-label">Analog Group</label>
+        <input type="text" class="form-control" name="analog_group" id="analog_group" value="{{ part.analog_group }}">
+    </div>
+    <div class="mb-3">
+        <label for="photo" class="form-label">Update Photo (optional)</label>
+        <input type="file" class="form-control" name="photo" id="photo">
+    </div>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <a href="{{ url_for('main.view_part', part_id=part.id) }}" class="btn btn-secondary">Back to Details</a>
+</form>
+{% endblock %}

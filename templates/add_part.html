@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Add New Part{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Add New Part</h2>
+<form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+    <div class="mb-3">
+        <label for="sap_code" class="form-label">SAP Code</label>
+        <input type="text" class="form-control" name="sap_code" id="sap_code" required>
+    </div>
+    <div class="mb-3">
+        <label for="part_number" class="form-label">Part Number</label>
+        <input type="text" class="form-control" name="part_number" id="part_number">
+    </div>
+    <div class="mb-3">
+        <label for="name" class="form-label">Name</label>
+        <input type="text" class="form-control" name="name" id="name" required>
+    </div>
+    <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <textarea class="form-control" name="description" id="description" rows="3"></textarea>
+    </div>
+    <div class="mb-3">
+        <label for="category" class="form-label">Category</label>
+        <input type="text" class="form-control" name="category" id="category">
+    </div>
+    <div class="mb-3">
+        <label for="equipment_code" class="form-label">Equipment Code</label>
+        <input type="text" class="form-control" name="equipment_code" id="equipment_code">
+    </div>
+    <div class="mb-3">
+        <label for="location" class="form-label">Storage Location</label>
+        <input type="text" class="form-control" name="location" id="location">
+    </div>
+    <div class="mb-3">
+        <label for="manufacturer" class="form-label">Manufacturer</label>
+        <input type="text" class="form-control" name="manufacturer" id="manufacturer">
+    </div>
+    <div class="mb-3">
+        <label for="analog_group" class="form-label">Analog Group (optional)</label>
+        <input type="text" class="form-control" name="analog_group" id="analog_group">
+    </div>
+    <div class="mb-3">
+        <label for="photo" class="form-label">Photo</label>
+        <input type="file" class="form-control" name="photo" id="photo">
+    </div>
+    <button type="submit" class="btn btn-primary">Add Part</button>
+    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Back to list</a>
+</form>
+{% endblock %}

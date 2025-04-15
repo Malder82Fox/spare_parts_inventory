@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Part Details{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Part Details: {{ part.name }}</h2>
+<div class="card mb-4">
+    <div class="row g-0">
+        <div class="col-md-4 text-center">
+            {% if part.photo_path %}
+                <img src="/{{ part.photo_path }}" class="img-fluid rounded-start p-3" alt="Part Photo">
+            {% else %}
+                <p class="p-3">No photo available</p>
+            {% endif %}
+        </div>
+        <div class="col-md-8">
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>SAP Code:</strong> {{ part.sap_code }}</li>
+                    <li class="list-group-item"><strong>Part Number:</strong> {{ part.part_number }}</li>
+                    <li class="list-group-item"><strong>Category:</strong> {{ part.category }}</li>
+                    <li class="list-group-item"><strong>Equipment Code:</strong> {{ part.equipment_code }}</li>
+                    <li class="list-group-item"><strong>Location:</strong> {{ part.location }}</li>
+                    <li class="list-group-item"><strong>Manufacturer:</strong> {{ part.manufacturer }}</li>
+                    <li class="list-group-item"><strong>Analog Group:</strong> {{ part.analog_group }}</li>
+                    <li class="list-group-item"><strong>Description:</strong> {{ part.description }}</li>
+                    <li class="list-group-item"><strong>Date Added:</strong> {{ part.created_at.strftime('%d.%m.%Y %H:%M') }}</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if analogs %}
+<div class="mb-4">
+    <h5>Analog Parts</h5>
+    <ul class="list-group">
+        {% for analog in analogs %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="{{ url_for('main.view_part', part_id=analog.id) }}">{{ analog.name }}</a>
+            <span class="badge bg-secondary">{{ analog.sap_code }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<a href="{{ url_for('main.index') }}" class="btn btn-secondary">Back to list</a>
+{% endblock %}
