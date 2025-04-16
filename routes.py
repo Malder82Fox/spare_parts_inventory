@@ -1,3 +1,4 @@
+from flask import current_app
 from flask import Blueprint
 from flask import render_template, redirect, url_for, request, flash, send_file, session
 from flask_login import login_user, logout_user, login_required, current_user
@@ -40,10 +41,50 @@ def logout():
 
 #additional for routes
 
+# @main.route('/add', methods=['GET', 'POST'])
+# @login_required
+# def add_part():
+#     return render_template('add_part.html')  # пока просто заглушка
+
 @main.route('/add', methods=['GET', 'POST'])
 @login_required
 def add_part():
-    return render_template('add_part.html')  # пока просто заглушка
+    if request.method == 'POST':
+        sap_code = request.form['sap_code']
+        part_number = request.form['part_number']
+        name = request.form['name']
+        description = request.form['description']
+        category = request.form['category']
+        equipment_code = request.form['equipment_code']
+        location = request.form['location']
+        manufacturer = request.form['manufacturer']
+        analog_group = request.form['analog_group']
+        photo = request.files['photo']
+
+        photo_path = None
+        if photo and allowed_file(photo.filename):
+            photo_path = handle_file_upload(photo, current_app.config['UPLOAD_FOLDER'])
+
+        new_part = Part(
+            sap_code=sap_code,
+            part_number=part_number,
+            name=name,
+            description=description,
+            category=category,
+            equipment_code=equipment_code,
+            location=location,
+            manufacturer=manufacturer,
+            analog_group=analog_group,
+            photo_path=photo_path
+        )
+
+        db.session.add(new_part)
+        db.session.commit()
+
+        flash('✅ Part added successfully.')
+        return redirect(url_for('main.index'))
+
+    return render_template('add_part.html')
 
 @main.route('/edit/<int:part_id>', methods=['GET', 'POST'])
 @login_required
