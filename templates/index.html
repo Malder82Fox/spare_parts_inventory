@@ -1,81 +1,83 @@
 {% extends 'base.html' %}
-{% block title %}Parts Inventory{% endblock %}
-
 {% block content %}
-<h2 class="mb-4">Parts Inventory</h2>
+<div class="container mt-4">
+    <h2 class="mb-4">Parts Inventory</h2>
 
-<div class="mb-3">
-    <form class="row g-3" method="get" action="{{ url_for('main.index') }}">
-        <div class="col-md-4">
-            <input type="text" name="search" class="form-control" placeholder="Search by name..." value="{{ request.args.get('search', '') }}">
+    <!-- Поисковая форма -->
+    <form action="{{ url_for('main.search') }}" method="get" class="row g-3 mb-4">
+        <div class="col-md-10">
+            <input type="text" name="query" class="form-control" placeholder="Search by any keyword (SAP, Name, Category...)">
         </div>
-        <div class="col-md-3">
-            <input type="text" name="category" class="form-control" placeholder="Category" value="{{ request.args.get('category', '') }}">
-        </div>
-        <div class="col-md-3">
-            <input type="text" name="equipment_code" class="form-control" placeholder="Equipment Code" value="{{ request.args.get('equipment_code', '') }}">
-        </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100">Search</button>
+        <div class="col-md-2 d-grid">
+            <button type="submit" class="btn btn-primary">🔍 Search</button>
         </div>
     </form>
-</div>
 
-<div class="mb-3">
-    {% if user.role in ['admin', 'root'] %}
-        <a href="{{ url_for('main.add_part') }}" class="btn btn-success">Add New Part</a>
-    {% endif %}
-    {% if user.role in ['admin', 'root'] %}
-        <a href="{{ url_for('main.export') }}" class="btn btn-outline-secondary">Export to Excel</a>
-        <a href="{{ url_for('main.import_parts') }}" class="btn btn-outline-info">Import from Excel</a>
-    {% endif %}
-</div>
+    <!-- Кнопки действий -->
+    <div class="mb-3 d-flex justify-content-start gap-2">
+        {% if current_user.role in ['admin', 'root'] %}
+            <a href="{{ url_for('main.add_part') }}" class="btn btn-success">Add New Part</a>
+        {% endif %}
+        {% if current_user.role in ['admin', 'root'] %}
+            <a href="{{ url_for('main.export') }}" class="btn btn-secondary">Export to Excel</a>
+            <a href="{{ url_for('main.import_parts') }}" class="btn btn-info">Import from Excel</a>
+        {% endif %}
+    </div>
 
-<table class="table table-hover table-bordered align-middle text-center">
-    <thead class="table-dark">
-        <tr>
-            <th>SAP Code</th>
-            <th>Part Number</th>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Equipment Code</th>
-            <th>Location</th>
-            <th>Manufacturer</th>
-            <th>Analog Group</th>
-            <th>Photo</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for part in parts %}
-        <tr>
-            <td>{{ part.sap_code }}</td>
-            <td>{{ part.part_number }}</td>
-            <td><a href="{{ url_for('main.view_part', part_id=part.id) }}">{{ part.name }}</a></td>
-            <td>{{ part.category }}</td>
-            <td>{{ part.equipment_code }}</td>
-            <td>{{ part.location }}</td>
-            <td>{{ part.manufacturer }}</td>
-            <td>{{ part.analog_group or '—' }}</td>
-            <td>
-                {% if part.photo_path %}
-                    <img src="/{{ part.photo_path }}" width="60">
-                {% else %}
-                    —
-                {% endif %}
-            </td>
-            <td>
-                {% if user.role in ['admin', 'root'] %}
-                    <a href="{{ url_for('main.edit_part', part_id=part.id) }}" class="btn btn-sm btn-warning">Edit</a>
-                {% endif %}
-                {% if user.role == 'root' %}
-                    <form action="{{ url_for('main.delete_part', part_id=part.id) }}" method="post" style="display:inline-block">
-                        <button class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this part?');">Delete</button>
-                    </form>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+    <!-- Таблица -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>SAP Code</th>
+                            <th>Part Number</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Equipment Code</th>
+                            <th>Location</th>
+                            <th>Manufacturer</th>
+                            <th>Analog Group</th>
+                            <th>Photo</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for part in parts %}
+                        <tr>
+                            <td>{{ part.sap_code }}</td>
+                            <td>{{ part.part_number }}</td>
+                            <td><a href="{{ url_for('main.view_part', part_id=part.id) }}">{{ part.name }}</a></td>
+                            <td>{{ part.category }}</td>
+                            <td>{{ part.equipment_code }}</td>
+                            <td>{{ part.location }}</td>
+                            <td>{{ part.manufacturer }}</td>
+                            <td>{{ part.analog_group }}</td>
+                            <td>
+                                {% if part.photo_path %}
+                                    <img src="{{ url_for('static', filename=part.photo_path.split('static/')[-1]) }}"
+                                         alt="Photo" style="max-width: 50px;">
+                                {% else %}
+                                    &mdash;
+                                {% endif %}
+                            </td>
+                            <td class="d-flex gap-1">
+                                {% if current_user.role in ['admin', 'root'] %}
+                                    <a href="{{ url_for('main.edit_part', part_id=part.id) }}" class="btn btn-warning btn-sm">Edit</a>
+                                {% endif %}
+                                {% if current_user.role == 'root' %}
+                                    <form action="{{ url_for('main.delete_part', part_id=part.id) }}" method="post" onsubmit="return confirm('Are you sure?');">
+                                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

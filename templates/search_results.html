@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Search Results{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h4 class="mb-3">Search Result {{ index + 1 }} of {{ total }}</h4>
+
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">{{ part.name }}</h5>
+      <p><strong>SAP Code:</strong> {{ part.sap_code }}</p>
+      <p><strong>Part Number:</strong> {{ part.part_number }}</p>
+      <p><strong>Category:</strong> {{ part.category }}</p>
+      <p><strong>Equipment Code:</strong> {{ part.equipment_code }}</p>
+      <p><strong>Location:</strong> {{ part.location }}</p>
+      <p><strong>Manufacturer:</strong> {{ part.manufacturer }}</p>
+      <p><strong>Analog Group:</strong> {{ part.analog_group }}</p>
+      <p><strong>Description:</strong> {{ part.description }}</p>
+
+      {% if part.photo_path %}
+      <div class="mt-3">
+        <img src="{{ url_for('static', filename=part.photo_path.split('static/')[-1]) }}" alt="Photo" class="img-fluid rounded border" style="max-height: 300px;">
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mt-4 d-flex justify-content-between">
+    {% if index > 0 %}
+    <a href="{{ url_for('main.search_results', index=index-1) }}" class="btn btn-outline-secondary">⬅ Previous</a>
+    {% else %}<div></div>{% endif %}
+
+    {% if index < total - 1 %}
+    <a href="{{ url_for('main.search_results', index=index+1) }}" class="btn btn-outline-secondary">Next ➡</a>
+    {% endif %}
+  </div>
+
+  <div class="mt-3">
+    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">🔙 Back to Main</a>
+  </div>
+</div>
+{% endblock %}

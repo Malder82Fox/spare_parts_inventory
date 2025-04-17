@@ -159,10 +159,122 @@ def delete_part(part_id):
 @login_required
 def export():
     flash("Export is not implemented yet.")
-    return redirect(url_for('main.index'))
+    return redirect(url_for('main.index'))  #plug
 
-@main.route('/import')
+# @main.route('/import')
+# @login_required
+# def import_parts():
+#     flash("Import is not implemented yet.")
+#     return redirect(url_for('main.index')) #plug
+
+@main.route('/import', methods=['GET', 'POST'])
 @login_required
 def import_parts():
-    flash("Import is not implemented yet.")
-    return redirect(url_for('main.index'))
+    if current_user.role not in ['admin', 'root']:
+        flash("You do not have permission to import parts.")
+        return redirect(url_for('main.index'))
+
+    if request.method == 'POST':
+        file = request.files.get('file')
+        if not file:
+            flash("No file uploaded.")
+            return redirect(url_for('main.import_parts'))
+
+        filename = file.filename.lower()
+
+        try:
+            if filename.endswith('.xlsx'):
+                from openpyxl import load_workbook
+                wb = load_workbook(file)
+                ws = wb.active
+                for row in ws.iter_rows(min_row=2, values_only=True):
+                    part = Part(
+                        sap_code=row[0],
+                        part_number=row[1],
+                        name=row[2],
+                        category=row[3],
+                        equipment_code=row[4],
+                        location=row[5],
+                        manufacturer=row[6],
+                        analog_group=row[7],
+                        description=row[8]
+                    )
+                    db.session.add(part)
+                db.session.commit()
+
+            elif filename.endswith('.csv'):
+                import csv, io
+                stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+                reader = csv.DictReader(stream)
+                for row in reader:
+                    part = Part(
+                        sap_code=row['sap_code'],
+                        part_number=row['part_number'],
+                        name=row['name'],
+                        category=row['category'],
+                        equipment_code=row['equipment_code'],
+                        location=row['location'],
+                        manufacturer=row['manufacturer'],
+                        analog_group=row['analog_group'],
+                        description=row['description']
+                    )
+                    db.session.add(part)
+                db.session.commit()
+
+            else:
+                flash("Unsupported file type. Please upload .xlsx or .csv.")
+                return redirect(url_for('main.import_parts'))
+
+            flash("✅ Parts imported successfully!")
+            return redirect(url_for('main.index'))
+
+        except Exception as e:
+            flash(f"❌ Error during import: {e}")
+            return redirect(url_for('main.import_parts'))
+
+    return render_template('import.html')
+
+@main.route('/search', methods=['GET'])
+@login_required
+def search():
+    query = Part.query
+
+    search_fields = ['sap_code', 'part_number', 'name', 'category', 'equipment_code', 'location', 'manufacturer']
+
+    for field in search_fields:
+        value = request.args.get(field)
+        if value:
+            query = query.filter(getattr(Part, field).ilike(f"%{value}%"))
+
+    results = query.all()
+
+    if not results:
+        flash("No results found.")
+        return redirect(url_for('main.index'))
+
+    # Показать первую найденную, остальные — через next/prev
+    session['search_results'] = [p.id for p in results]
+    return redirect(url_for('main.search_results', index=0))
+
+
+@main.route('/search/results/<int:index>')
+@login_required
+def search_results(index):
+    ids = session.get('search_results', [])
+    if not ids:
+        flash("No results in session.")
+        return redirect(url_for('main.index'))
+
+    if index < 0 or index >= len(ids):
+        flash("Index out of range.")
+        return redirect(url_for('main.search_results', index=0))
+
+    part = Part.query.get_or_404(ids[index])
+    return render_template(
+        'search_results.html',
+        part=part,
+        index=index,
+        total=len(ids),
+        user=current_user
+    )
+

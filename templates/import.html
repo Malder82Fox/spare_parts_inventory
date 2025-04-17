@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Import Parts{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <h2 class="mb-4">Import Parts from Excel or CSV</h2>
+
+  <form action="{{ url_for('main.import_parts') }}" method="post" enctype="multipart/form-data">
+    <div class="mb-3">
+      <label for="file" class="form-label">Choose Excel (.xlsx) or CSV file:</label>
+      <input class="form-control" type="file" id="file" name="file" accept=".xlsx,.csv" required>
+    </div>
+    <button type="submit" class="btn btn-primary">📥 Import</button>
+    <a href="{{ url_for('main.index') }}" class="btn btn-secondary ms-2">🔙 Back to Main</a>
+  </form>
+
+  <div class="mt-4 alert alert-info">
+    <strong>Format:</strong> The file must include columns: <br>
+    <code>sap_code, part_number, name, category, equipment_code, location, manufacturer, analog_group, description</code>
+  </div>
+</div>
+{% endblock %}
