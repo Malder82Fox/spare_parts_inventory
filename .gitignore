@@ -9,6 +9,13 @@ __pycache__/
 dist/
 build/
 
+# Исключаем скриншоты в static/uploads
+static/uploads/*.png
+static/uploads/*.jpg
+static/uploads/*.jpeg
+static/uploads/*.gif
+
+
 # Conda
 env/
 .conda/
