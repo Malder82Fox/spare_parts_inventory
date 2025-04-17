@@ -86,20 +86,73 @@ def add_part():
 
     return render_template('add_part.html')
 
+# @main.route('/edit/<int:part_id>', methods=['GET', 'POST'])
+# @login_required
+# def edit_part(part_id):
+#     return render_template('edit_part.html', part_id=part_id)  # заглушка
+
 @main.route('/edit/<int:part_id>', methods=['GET', 'POST'])
 @login_required
 def edit_part(part_id):
-    return render_template('edit_part.html', part_id=part_id)  # заглушка
+    part = Part.query.get_or_404(part_id)
+
+    if request.method == 'POST':
+        part.sap_code = request.form['sap_code']
+        part.part_number = request.form['part_number']
+        part.name = request.form['name']
+        part.description = request.form['description']
+        part.category = request.form['category']
+        part.equipment_code = request.form['equipment_code']
+        part.location = request.form['location']
+        part.manufacturer = request.form['manufacturer']
+        part.analog_group = request.form['analog_group']
+        photo = request.files.get('photo')
+
+        if photo and allowed_file(photo.filename):
+            part.photo_path = handle_file_upload(photo, current_app.config['UPLOAD_FOLDER'])
+
+        db.session.commit()
+        flash('Part updated successfully.')
+        return redirect(url_for('main.view_part', part_id=part.id))
+
+    return render_template('edit_part.html', part=part, user=current_user)
+
+# @main.route('/part/<int:part_id>')
+# @login_required
+# def view_part(part_id):
+#     return render_template('view_part.html', part_id=part_id)  # заглушка
 
 @main.route('/part/<int:part_id>')
 @login_required
 def view_part(part_id):
-    return render_template('view_part.html', part_id=part_id)  # заглушка
+    part = Part.query.get_or_404(part_id)
+
+    analogs = []
+    if part.analog_group:
+        analogs = Part.query.filter(
+            Part.analog_group == part.analog_group,
+            Part.id != part.id
+        ).all()
+
+    return render_template('view_part.html', part=part, analogs=analogs, user=current_user)
+
+# @main.route('/delete/<int:part_id>', methods=['POST'])
+# @login_required
+# def delete_part(part_id):
+#     flash("Delete is not implemented yet.")
+#     return redirect(url_for('main.index'))  #plug
 
 @main.route('/delete/<int:part_id>', methods=['POST'])
 @login_required
 def delete_part(part_id):
-    flash("Delete is not implemented yet.")
+    if current_user.role != 'root':
+        flash('❌ You do not have permission to delete parts.')
+        return redirect(url_for('main.index'))
+
+    part = Part.query.get_or_404(part_id)
+    db.session.delete(part)
+    db.session.commit()
+    flash('✅ Part deleted successfully.')
     return redirect(url_for('main.index'))
 
 @main.route('/export')
