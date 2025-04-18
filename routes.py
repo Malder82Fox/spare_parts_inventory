@@ -2,10 +2,12 @@ from flask import current_app
 from flask import Blueprint
 from flask import render_template, redirect, url_for, request, flash, send_file, session
 from flask_login import login_user, logout_user, login_required, current_user
+# from sqlalchemy.sql.functions import count
 from werkzeug.security import check_password_hash
 from models import User, Part
 from extensions import db, login_manager
 from utils import allowed_file, handle_file_upload
+from sqlalchemy import or_
 from openpyxl import Workbook
 import io
 
@@ -19,7 +21,8 @@ def load_user(user_id):
 @login_required
 def index():
     parts = Part.query.all()
-    return render_template('index.html', parts=parts, user=current_user)
+    count = Part.query.count()
+    return render_template('index.html', parts=parts, user=current_user, count=count)
 
 @main.route('/login', methods=['GET', 'POST'])
 def login():
@@ -161,11 +164,78 @@ def export():
     flash("Export is not implemented yet.")
     return redirect(url_for('main.index'))  #plug
 
-# @main.route('/import')
+# @main.route('/import')  # old version import, added not correct
 # @login_required
 # def import_parts():
 #     flash("Import is not implemented yet.")
 #     return redirect(url_for('main.index')) #plug
+
+# @main.route('/import', methods=['GET', 'POST'])
+# @login_required
+# def import_parts():
+#     if current_user.role not in ['admin', 'root']:
+#         flash("You do not have permission to import parts.")
+#         return redirect(url_for('main.index'))
+#
+#     if request.method == 'POST':
+#         file = request.files.get('file')
+#         if not file:
+#             flash("No file uploaded.")
+#             return redirect(url_for('main.import_parts'))
+#
+#         filename = file.filename.lower()
+#
+#         try:
+#             if filename.endswith('.xlsx'):
+#                 from openpyxl import load_workbook
+#                 wb = load_workbook(file)
+#                 ws = wb.active
+#                 for row in ws.iter_rows(min_row=2, values_only=True):
+#                     part = Part(
+#                         sap_code=row[0],
+#                         part_number=row[1],
+#                         name=row[2],
+#                         category=row[3],
+#                         equipment_code=row[4],
+#                         location=row[5],
+#                         manufacturer=row[6],
+#                         analog_group=row[7],
+#                         description=row[8]
+#                     )
+#                     db.session.add(part)
+#                 db.session.commit()
+#
+#             elif filename.endswith('.csv'):
+#                 import csv, io
+#                 stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+#                 reader = csv.DictReader(stream)
+#                 for row in reader:
+#                     part = Part(
+#                         sap_code=row['sap_code'],
+#                         part_number=row['part_number'],
+#                         name=row['name'],
+#                         category=row['category'],
+#                         equipment_code=row['equipment_code'],
+#                         location=row['location'],
+#                         manufacturer=row['manufacturer'],
+#                         analog_group=row['analog_group'],
+#                         description=row['description']
+#                     )
+#                     db.session.add(part)
+#                 db.session.commit()
+#
+#             else:
+#                 flash("Unsupported file type. Please upload .xlsx or .csv.")
+#                 return redirect(url_for('main.import_parts'))
+#
+#             flash("✅ Parts imported successfully!")
+#             return redirect(url_for('main.index'))
+#
+#         except Exception as e:
+#             flash(f"❌ Error during import: {e}")
+#             return redirect(url_for('main.import_parts'))
+#
+#     return render_template('import.html')
 
 @main.route('/import', methods=['GET', 'POST'])
 @login_required
@@ -181,6 +251,8 @@ def import_parts():
             return redirect(url_for('main.import_parts'))
 
         filename = file.filename.lower()
+        added = 0
+        skipped = []
 
         try:
             if filename.endswith('.xlsx'):
@@ -188,6 +260,12 @@ def import_parts():
                 wb = load_workbook(file)
                 ws = wb.active
                 for row in ws.iter_rows(min_row=2, values_only=True):
+                    if not row[0]:
+                        continue
+                    existing = Part.query.filter_by(sap_code=row[0]).first()
+                    if existing:
+                        skipped.append(row[0])
+                        continue
                     part = Part(
                         sap_code=row[0],
                         part_number=row[1],
@@ -200,6 +278,7 @@ def import_parts():
                         description=row[8]
                     )
                     db.session.add(part)
+                    added += 1
                 db.session.commit()
 
             elif filename.endswith('.csv'):
@@ -207,6 +286,12 @@ def import_parts():
                 stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
                 reader = csv.DictReader(stream)
                 for row in reader:
+                    if not row['sap_code']:
+                        continue
+                    existing = Part.query.filter_by(sap_code=row['sap_code']).first()
+                    if existing:
+                        skipped.append(row['sap_code'])
+                        continue
                     part = Part(
                         sap_code=row['sap_code'],
                         part_number=row['part_number'],
@@ -219,13 +304,17 @@ def import_parts():
                         description=row['description']
                     )
                     db.session.add(part)
+                    added += 1
                 db.session.commit()
 
             else:
                 flash("Unsupported file type. Please upload .xlsx or .csv.")
                 return redirect(url_for('main.import_parts'))
 
-            flash("✅ Parts imported successfully!")
+            flash(f"✅ {added} parts imported successfully.")
+            if skipped:
+                preview = ", ".join(skipped[:10]) + ("..." if len(skipped) > 10 else "")
+                flash(f"⚠️ Skipped {len(skipped)} duplicates: {preview}")
             return redirect(url_for('main.index'))
 
         except Exception as e:
@@ -234,27 +323,7 @@ def import_parts():
 
     return render_template('import.html')
 
-@main.route('/search', methods=['GET'])
-@login_required
-def search():
-    query = Part.query
 
-    search_fields = ['sap_code', 'part_number', 'name', 'category', 'equipment_code', 'location', 'manufacturer']
-
-    for field in search_fields:
-        value = request.args.get(field)
-        if value:
-            query = query.filter(getattr(Part, field).ilike(f"%{value}%"))
-
-    results = query.all()
-
-    if not results:
-        flash("No results found.")
-        return redirect(url_for('main.index'))
-
-    # Показать первую найденную, остальные — через next/prev
-    session['search_results'] = [p.id for p in results]
-    return redirect(url_for('main.search_results', index=0))
 
 
 @main.route('/search/results/<int:index>')
@@ -278,3 +347,32 @@ def search_results(index):
         user=current_user
     )
 
+from sqlalchemy import or_
+
+@main.route('/search', methods=['GET'])
+@login_required
+def search():
+    keyword = request.args.get('query', '').strip()
+
+    if not keyword:
+        flash("Enter a search keyword.")
+        return redirect(url_for('main.index'))
+
+    results = Part.query.filter(or_(
+        Part.sap_code.ilike(f"%{keyword}%"),
+        Part.part_number.ilike(f"%{keyword}%"),
+        Part.name.ilike(f"%{keyword}%"),
+        Part.category.ilike(f"%{keyword}%"),
+        Part.equipment_code.ilike(f"%{keyword}%"),
+        Part.location.ilike(f"%{keyword}%"),
+        Part.manufacturer.ilike(f"%{keyword}%"),
+        Part.analog_group.ilike(f"%{keyword}%"),
+        Part.description.ilike(f"%{keyword}%")
+    )).all()
+
+    if not results:
+        flash("No results found.")
+        return redirect(url_for('main.index'))
+
+    session['search_results'] = [p.id for p in results]
+    return redirect(url_for('main.search_results', index=0))
