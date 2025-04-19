@@ -1,5 +1,22 @@
 {% extends 'base.html' %}
-{% block title %}Part Details{% endblock %}
+{% block title %}Part Details
+<div class="d-flex gap-2 mt-4">
+    {% if previous_id %}
+    <a href="{{ url_for('main.view_part', part_id=previous_id) }}" class="btn btn-outline-secondary">⬅ Previous</a>
+    {% endif %}
+
+    {% if next_id %}
+    <a href="{{ url_for('main.view_part', part_id=next_id) }}" class="btn btn-outline-secondary">Next ➡</a>
+    {% endif %}
+
+    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">🔙 Back to list</a>
+
+    {% if current_user.role in ['admin', 'root'] %}
+    <a href="{{ url_for('main.edit_part', part_id=part.id) }}" class="btn btn-warning">✏️ Edit</a>
+    {% endif %}
+</div>
+{% endblock %}
+
 
 {% block content %}
 <h2 class="mb-4">Part Details: {{ part.name }}</h2>
@@ -45,4 +62,21 @@
 {% endif %}
 
 <a href="{{ url_for('main.index') }}" class="btn btn-secondary">Back to list</a>
+
+<div class="d-flex gap-2 mt-4">
+    {% if previous_id %}
+    <a href="{{ url_for('main.view_part', part_id=previous_id) }}" class="btn btn-outline-secondary">⬅ Previous</a>
+    {% endif %}
+
+    {% if next_id %}
+    <a href="{{ url_for('main.view_part', part_id=next_id) }}" class="btn btn-outline-secondary">Next ➡</a>
+    {% endif %}
+
+    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">🔙 Back to list</a>
+
+    {% if current_user.role in ['admin', 'root'] %}
+    <a href="{{ url_for('main.edit_part', part_id=part.id) }}" class="btn btn-warning">✏️ Edit</a>
+    {% endif %}
+</div>
 {% endblock %}
+
