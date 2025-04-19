@@ -12,7 +12,6 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
 
-
 class Part(db.Model):
     __tablename__ = 'parts'
     id = db.Column(db.Integer, primary_key=True)
@@ -26,7 +25,7 @@ class Part(db.Model):
     manufacturer = db.Column(db.String(100))
     analog_group = db.Column(db.String(50))
     photo_path = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
         return f'<Part {self.sap_code}: {self.name}>'

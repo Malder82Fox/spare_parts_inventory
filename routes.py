@@ -121,9 +121,30 @@ def edit_part(part_id):
     return render_template('edit_part.html', part=part, user=current_user)
 
 # @main.route('/part/<int:part_id>')
-# @login_required
-# def view_part(part_id):
-#     return render_template('view_part.html', part_id=part_id)  # заглушка
+@login_required
+def view_part(part_id):
+    part = Part.query.get_or_404(part_id)
+
+    analogs = []
+    if part.analog_group:
+        analogs = Part.query.filter(
+            Part.analog_group == part.analog_group,
+            Part.id != part.id
+        ).all()
+
+    all_ids = [p.id for p in Part.query.order_by(Part.id).all()]
+    current_index = all_ids.index(part.id)
+    prev_id = all_ids[current_index - 1] if current_index > 0 else None
+    next_id = all_ids[current_index + 1] if current_index < len(all_ids) - 1 else None
+
+    return render_template(
+        'view_part.html',
+        part=part,
+        analogs=analogs,
+        user=current_user,
+        prev_id=prev_id,
+        next_id=next_id
+    )  # заглушка
 
 @main.route('/part/<int:part_id>')
 @login_required
@@ -137,7 +158,19 @@ def view_part(part_id):
             Part.id != part.id
         ).all()
 
-    return render_template('view_part.html', part=part, analogs=analogs, user=current_user)
+    all_ids = [p.id for p in Part.query.order_by(Part.id).all()]
+    current_index = all_ids.index(part.id)
+    prev_id = all_ids[current_index - 1] if current_index > 0 else None
+    next_id = all_ids[current_index + 1] if current_index < len(all_ids) - 1 else None
+
+    return render_template(
+        'view_part.html',
+        part=part,
+        analogs=analogs,
+        user=current_user,
+        prev_id=prev_id,
+        next_id=next_id
+    )
 
 # @main.route('/delete/<int:part_id>', methods=['POST'])
 # @login_required

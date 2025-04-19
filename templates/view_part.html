@@ -1,82 +1,42 @@
+
 {% extends 'base.html' %}
-{% block title %}Part Details
-<div class="d-flex gap-2 mt-4">
-    {% if previous_id %}
-    <a href="{{ url_for('main.view_part', part_id=previous_id) }}" class="btn btn-outline-secondary">⬅ Previous</a>
-    {% endif %}
-
-    {% if next_id %}
-    <a href="{{ url_for('main.view_part', part_id=next_id) }}" class="btn btn-outline-secondary">Next ➡</a>
-    {% endif %}
-
-    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">🔙 Back to list</a>
-
-    {% if current_user.role in ['admin', 'root'] %}
-    <a href="{{ url_for('main.edit_part', part_id=part.id) }}" class="btn btn-warning">✏️ Edit</a>
-    {% endif %}
-</div>
-{% endblock %}
-
-
 {% block content %}
-<h2 class="mb-4">Part Details: {{ part.name }}</h2>
-<div class="card mb-4">
-    <div class="row g-0">
-        <div class="col-md-4 text-center">
-            {% if part.photo_path %}
-                <img src="/{{ part.photo_path }}" class="img-fluid rounded-start p-3" alt="Part Photo">
-            {% else %}
-                <p class="p-3">No photo available</p>
-            {% endif %}
-        </div>
-        <div class="col-md-8">
-            <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    <li class="list-group-item"><strong>SAP Code:</strong> {{ part.sap_code }}</li>
-                    <li class="list-group-item"><strong>Part Number:</strong> {{ part.part_number }}</li>
-                    <li class="list-group-item"><strong>Category:</strong> {{ part.category }}</li>
-                    <li class="list-group-item"><strong>Equipment Code:</strong> {{ part.equipment_code }}</li>
-                    <li class="list-group-item"><strong>Location:</strong> {{ part.location }}</li>
-                    <li class="list-group-item"><strong>Manufacturer:</strong> {{ part.manufacturer }}</li>
-                    <li class="list-group-item"><strong>Analog Group:</strong> {{ part.analog_group }}</li>
-                    <li class="list-group-item"><strong>Description:</strong> {{ part.description }}</li>
-                    <li class="list-group-item"><strong>Date Added:</strong> {{ part.created_at.strftime('%d.%m.%Y %H:%M') }}</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-</div>
-
-{% if analogs %}
-<div class="mb-4">
-    <h5>Analog Parts</h5>
-    <ul class="list-group">
-        {% for analog in analogs %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-            <a href="{{ url_for('main.view_part', part_id=analog.id) }}">{{ analog.name }}</a>
-            <span class="badge bg-secondary">{{ analog.sap_code }}</span>
-        </li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
-
-<a href="{{ url_for('main.index') }}" class="btn btn-secondary">Back to list</a>
-
-<div class="d-flex gap-2 mt-4">
-    {% if previous_id %}
-    <a href="{{ url_for('main.view_part', part_id=previous_id) }}" class="btn btn-outline-secondary">⬅ Previous</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <a href="{{ url_for('main.index') }}" class="btn btn-secondary me-2">⬅ Back to Main</a>
+    {% if prev_id %}
+      <a href="{{ url_for('main.view_part', part_id=prev_id) }}" class="btn btn-outline-primary me-2">◀ Previous</a>
     {% endif %}
-
     {% if next_id %}
-    <a href="{{ url_for('main.view_part', part_id=next_id) }}" class="btn btn-outline-secondary">Next ➡</a>
+      <a href="{{ url_for('main.view_part', part_id=next_id) }}" class="btn btn-outline-primary">Next ▶</a>
     {% endif %}
-
-    <a href="{{ url_for('main.index') }}" class="btn btn-secondary">🔙 Back to list</a>
-
-    {% if current_user.role in ['admin', 'root'] %}
-    <a href="{{ url_for('main.edit_part', part_id=part.id) }}" class="btn btn-warning">✏️ Edit</a>
+  </div>
+  <div>
+    {% if user.role == 'admin' or user.role == 'root' %}
+      <a href="{{ url_for('main.edit_part', part_id=part.id) }}" class="btn btn-warning">Edit</a>
     {% endif %}
+    {% if user.role == 'root' %}
+      <form method="POST" action="{{ url_for('main.delete_part', part_id=part.id) }}" style="display:inline;">
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </form>
+    {% endif %}
+  </div>
 </div>
-{% endblock %}
 
+<h3 class="mb-4">Part Details: {{ part.name }}</h3>
+
+<div class="table-responsive">
+  <table class="table table-bordered">
+    <tr><th>SAP Code:</th><td>{{ part.sap_code }}</td></tr>
+    <tr><th>Part Number:</th><td>{{ part.part_number }}</td></tr>
+    <tr><th>Category:</th><td>{{ part.category }}</td></tr>
+    <tr><th>Equipment Code:</th><td>{{ part.equipment_code }}</td></tr>
+    <tr><th>Location:</th><td>{{ part.location }}</td></tr>
+    <tr><th>Manufacturer:</th><td>{{ part.manufacturer }}</td></tr>
+    <tr><th>Analog Group:</th><td>{{ part.analog_group or 'None' }}</td></tr>
+    <tr><th>Description:</th><td>{{ part.description }}</td></tr>
+    <tr><th>Date Added:</th><td>{{ part.timestamp.strftime('%d.%m.%Y %H:%M') }}</td></tr>
+  </table>
+</div>
+
+{% endblock %}
