@@ -1,0 +1,14 @@
+<aside class="list-group me-3" style="min-width:220px;">
+  {% set p = request.path %}
+  <a class="list-group-item list-group-item-action {{ 'active' if p == '/parts/' else '' }}"
+     href="/parts/">Каталог</a>
+
+  <a class="list-group-item list-group-item-action {{ 'active' if p.startswith('/parts/add') else '' }}"
+     href="/parts/add">Добавить</a>
+
+  <a class="list-group-item list-group-item-action {{ 'active' if p.startswith('/parts/import') else '' }}"
+     href="/parts/import">Импорт из Excel</a>
+
+  <a class="list-group-item list-group-item-action {{ 'active' if p.startswith('/parts/export') else '' }}"
+     href="/parts/export">Экспорт в Excel</a>
+</aside>

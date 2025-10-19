@@ -1,0 +1,13 @@
+<nav class="d-flex flex-wrap align-items-center gap-2 my-2">
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('ui.home') }}">🏠 Главная</a>
+
+  <a class="btn btn-sm {% if request.blueprint=='maintenance' %}btn-success{% else %}btn-outline-success{% endif %}"
+     href="{{ url_for('maintenance.equipment_list') }}">
+    🛠 Обслуживание
+  </a>
+
+  <a class="btn btn-sm {% if request.endpoint and request.endpoint.startswith('main.') %}btn-primary{% else %}btn-outline-primary{% endif %}"
+     href="{{ url_for('main.index') }}">
+    📦 Запчасти
+  </a>
+</nav>

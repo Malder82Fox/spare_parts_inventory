@@ -1,0 +1,7 @@
+<aside class="list-group me-3" style="min-width:220px;">
+  <a class="list-group-item list-group-item-action" href="{{ url_for('maintenance.equipment_list') }}">Оборудование</a>
+  <a class="list-group-item list-group-item-action" href="{{ url_for('maintenance.checklist_templates_list') }}">Чек-листы</a>
+  <a class="list-group-item list-group-item-action" href="{{ url_for('maintenance.maintenance_plans_list') }}">Планы</a>
+  <a class="list-group-item list-group-item-action" href="{{ url_for('maintenance.workorders_list') }}">Work Orders</a>
+  <a class="list-group-item list-group-item-action" href="{{ url_for('maintenance.workorders_list', status='open') }}">Мои задачи</a>
+</aside>

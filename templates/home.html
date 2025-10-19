@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Что делаем сегодня?</h1>
+
+<div class="row g-3">
+  <div class="col-12 col-md-6">
+    <a class="card text-decoration-none border-0 shadow-sm h-100" href="{{ url_for('main.index') }}">
+      <div class="card-body">
+        <h3 class="h5 mb-2">📦 Запчасти</h3>
+        <p class="text-muted mb-3">Каталог, поиск, импорт/экспорт, остатки, min/max.</p>
+        <div class="d-flex gap-3 small">Быстро: импорт из Excel</div>
+      </div>
+    </a>
+  </div>
+
+  <div class="col-12 col-md-6">
+    <a class="card text-decoration-none border-0 shadow-sm h-100" href="{{ url_for('maintenance.equipment_list') }}">
+      <div class="card-body">
+        <h3 class="h5 mb-2">🛠 Обслуживание</h3>
+        <p class="text-muted mb-3">Оборудование, чек-листы, планы ТО, WO, QR-формы.</p>
+        <div class="d-flex gap-3 small">Быстро: создать план ТО</div>
+      </div>
+    </a>
+  </div>
+</div>
+{% endblock %}
