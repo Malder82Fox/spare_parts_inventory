@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>WO #{{ wo.id }} — {{ wo.equipment.code }} — {{ wo.template.code }}</h2>
+<p>Status: {{ wo.status }} | Due: {{ wo.due_date }}</p>
+<p>Created: {{ wo.created_at }} {% if wo.closed_at %}| Closed: {{ wo.closed_at }}{% endif %}</p>
+<a class="btn" href="{{ url_for('maintenance.workorder_fill', wid=wo.id) }}">Fill/Review</a>
+<hr>
+<table class="table">
+  <tr><th>#</th><th>Item (EN/RU)</th><th>Type</th><th>OK?</th><th>Value</th></tr>
+  {% for it in wo.items %}
+    <tr>
+      <td>{{ loop.index }}</td>
+      <td>{{ it.checklist_item.text_en }} / {{ it.checklist_item.text_ru }}</td>
+      <td>{{ it.checklist_item.field_type }}</td>
+      <td>{{ it.is_ok }}</td>
+      <td>{{ it.value_numeric or it.value_select or it.value_text }}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %}

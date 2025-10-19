@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Work Orders</h2>
+<form method="get">
+  <select name="status" onchange="this.form.submit()">
+    <option value="">All</option>
+    {% for s in ['open','in_progress','done','rejected'] %}
+      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+</form>
+<table class="table">
+  <tr><th>ID</th><th>Equipment</th><th>Template</th><th>Due</th><th>Status</th><th></th></tr>
+  {% for w in items %}
+    <tr>
+      <td>{{ w.id }}</td>
+      <td>{{ w.equipment.code }}</td>
+      <td>{{ w.template.code }}</td>
+      <td>{{ w.due_date }}</td>
+      <td>{{ w.status }}</td>
+      <td>
+        <a href="{{ url_for('maintenance.workorder_view', wid=w.id) }}">Open</a>
+        {% if w.status=='open' %}
+          | <a href="{{ url_for('maintenance.workorder_fill', wid=w.id) }}">Fill</a>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+</table>
+{% if current_user.role in ['admin','root'] %}
+<hr>
+<h3>Create quick WO</h3>
+<form method="post" action="{{ url_for('maintenance.workorder_new') }}">
+  <label>Equipment ID <input name="equipment_id" required></label>
+  <label>Template ID <input name="template_id" required></label>
+  <button type="submit">Create</button>
+</form>
+{% endif %}
+{% endblock %}

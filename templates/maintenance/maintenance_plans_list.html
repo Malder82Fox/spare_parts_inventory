@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Maintenance Plans</h2>
+{% if current_user.role in ['admin','root'] %}
+  <a class="btn" href="{{ url_for('maintenance.maintenance_plan_add') }}">+ Add Plan</a>
+  <form method="post" action="{{ url_for('maintenance.maintenance_schedule_run') }}" style="display:inline">
+    <button type="submit">Run Scheduler</button>
+  </form>
+{% endif %}
+<table class="table">
+  <tr><th>ID</th><th>Equipment</th><th>Template</th><th>Freq</th><th>Next Due</th></tr>
+  {% for it in items %}
+    <tr>
+      <td>{{ it.id }}</td>
+      <td>{{ it.equipment.code }}</td>
+      <td>{{ it.template.code }}</td>
+      <td>{{ it.frequency }}</td>
+      <td>{{ it.next_due_date }}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %}

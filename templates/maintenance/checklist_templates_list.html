@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Checklist Templates</h2>
+{% if current_user.role in ['admin','root'] %}
+  <a class="btn" href="{{ url_for('maintenance.checklist_template_add') }}">+ Add Template</a>
+{% endif %}
+<table class="table">
+  <tr><th>Code</th><th>Name (EN/RU)</th><th>Default Freq</th><th></th></tr>
+  {% for it in items %}
+    <tr>
+      <td>{{ it.code }}</td>
+      <td>{{ it.name_en }} / {{ it.name_ru }}</td>
+      <td>{{ it.default_frequency }}</td>
+      <td>{% if current_user.role in ['admin','root'] %}<a href="{{ url_for('maintenance.checklist_template_edit', tid=it.id) }}">Edit</a>{% endif %}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{{ item.code }} — {{ item.name }}</h2>
+<p><b>Category:</b> {{ item.category }} | <b>Location:</b> {{ item.location }}</p>
+<p><b>Vendor:</b> {{ item.vendor }} | <b>Model:</b> {{ item.model }}</p>
+<p><b>S/N:</b> {{ item.serial_number }} | <b>SAP:</b> {{ item.sap_number }}</p>
+<p>{{ item.notes }}</p>
+{% if current_user.role in ['admin','root'] %}
+  <a class="btn" href="{{ url_for('maintenance.equipment_edit', eid=item.id) }}">Edit</a>
+{% endif %}
+<hr>
+<h3>Plans</h3>
+<ul>
+  {% for p in item.plans %}
+    <li>{{ p.template.code }} — {{ p.frequency }} — next: {{ p.next_due_date }}</li>
+  {% endfor %}
+</ul>
+<h3>Work Orders</h3>
+<ul>
+  {% for w in item.workorders %}
+    <li><a href="{{ url_for('maintenance.workorder_view', wid=w.id) }}">WO #{{ w.id }}</a> — {{ w.status }} — due {{ w.due_date }}</li>
+  {% endfor %}
+</ul>
+{% endblock %}

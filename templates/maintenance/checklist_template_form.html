@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{{ 'Edit' if item else 'Add' }} Checklist Template</h2>
+<form method="post">
+  <label>Code<input name="code" value="{{ item.code if item else '' }}" required></label>
+  <label>Name EN<input name="name_en" value="{{ item.name_en if item else '' }}" required></label>
+  <label>Name RU<input name="name_ru" value="{{ item.name_ru if item else '' }}" required></label>
+  <label>Category<input name="category" value="{{ item.category if item else '' }}"></label>
+  <label>Default Frequency
+    <select name="default_frequency">
+      {% for f in ['daily','weekly','monthly','quarterly','yearly'] %}
+        <option value="{{ f }}" {% if item and item.default_frequency==f %}selected{% endif %}>{{ f }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Items (one per line, format: <code>EN | RU | field_type | options</code>)
+    <textarea name="items_raw" rows="12">{{ items_raw if items_raw else '' }}</textarea>
+  </label>
+  <button type="submit">Save</button>
+</form>
+{% endblock %}

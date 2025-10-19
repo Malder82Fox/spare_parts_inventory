@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>{{ 'Edit' if item else 'Add' }} Equipment</h2>
+<form method="post">
+  <label>Code<input name="code" value="{{ item.code if item else '' }}" required></label>
+  <label>Name<input name="name" value="{{ item.name if item else '' }}" required></label>
+  <label>Category<input name="category" value="{{ item.category if item else '' }}"></label>
+  <label>Location<input name="location" value="{{ item.location if item else '' }}"></label>
+  <label>Vendor<input name="vendor" value="{{ item.vendor if item else '' }}"></label>
+  <label>Model<input name="model" value="{{ item.model if item else '' }}"></label>
+  <label>Serial<input name="serial_number" value="{{ item.serial_number if item else '' }}"></label>
+  <label>SAP<input name="sap_number" value="{{ item.sap_number if item else '' }}"></label>
+  <label>Notes<textarea name="notes">{{ item.notes if item else '' }}</textarea></label>
+  <button type="submit">Save</button>
+</form>
+{% endblock %}

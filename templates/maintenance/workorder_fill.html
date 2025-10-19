@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Fill WO #{{ wo.id }} — {{ wo.equipment.code }} — {{ wo.template.name_en }} / {{ wo.template.name_ru }}</h2>
+<form method="post">
+  <table class="table">
+    <tr><th>#</th><th>Item (EN / RU)</th><th>Input</th></tr>
+    {% for it in wo.items %}
+      {% set ci = it.checklist_item %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ ci.text_en }}<br><small>{{ ci.text_ru }}</small></td>
+        <td>
+          {% if ci.field_type == 'checkbox' %}
+            <input type="checkbox" name="item_{{ it.id }}">
+          {% elif ci.field_type == 'numeric' %}
+            <input type="number" step="any" name="item_{{ it.id }}" placeholder="{{ ci.unit or '' }}">
+            {% if ci.lower_bound is not none and ci.upper_bound is not none %}
+              <small>Norm: {{ ci.lower_bound }}–{{ ci.upper_bound }} {{ ci.unit or '' }}</small>
+            {% endif %}
+          {% elif ci.field_type == 'select' %}
+            {% set opts = (ci.options or '').split(',') %}
+            <select name="item_{{ it.id }}">
+              <option value="">-- choose --</option>
+              {% for op in opts %}
+                {% set opt = op.strip() %}
+                {% if opt %}<option value="{{ opt }}">{{ opt }}</option>{% endif %}
+              {% endfor %}
+            </select>
+          {% else %}
+            <input type="text" name="item_{{ it.id }}">
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+  <button type="submit">Submit</button>
+</form>
+{% endblock %}

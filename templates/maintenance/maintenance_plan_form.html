@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Add Maintenance Plan</h2>
+<form method="post">
+  <label>Equipment
+    <select name="equipment_id">
+      {% for e in eqs %}
+        <option value="{{ e.id }}">{{ e.code }} — {{ e.name }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Template
+    <select name="template_id">
+      {% for t in tpls %}
+        <option value="{{ t.id }}">{{ t.code }} — {{ t.name_en }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Frequency
+    <select name="frequency">
+      {% for f in ['daily','weekly','monthly','quarterly','yearly'] %}
+        <option value="{{ f }}">{{ f }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Next due date<input type="date" name="next_due_date" value=""></label>
+  <label>Grace days<input type="number" name="grace_days" value="0"></label>
+  <button type="submit">Save</button>
+</form>
+{% endblock %}

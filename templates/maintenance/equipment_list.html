@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Equipment</h2>
+<form method="get" class="mb-2">
+  <input name="q" value="{{ q }}" placeholder="Search code/name/category"/>
+  <button type="submit">Search</button>
+  {% if current_user.role in ['admin', 'root'] %}
+  <a href="{{ url_for('maintenance.equipment_add') }}" class="btn">+ Add</a>
+  {% endif %}
+</form>
+<table class="table">
+  <tr><th>Code</th><th>Name</th><th>Category</th><th>Location</th></tr>
+  {% for it in items %}
+    <tr>
+      <td><a href="{{ url_for('maintenance.equipment_view', eid=it.id) }}">{{ it.code }}</a></td>
+      <td>{{ it.name }}</td>
+      <td>{{ it.category or '' }}</td>
+      <td>{{ it.location or '' }}</td>
+    </tr>
+  {% endfor %}
+</table>
+{% endblock %}
