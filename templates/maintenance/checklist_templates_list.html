@@ -2,8 +2,8 @@
 {% block sidebar %}{% include '_sidebar_maintenance.html' %}{% endblock %}
 {% block content %}
 <h2>Checklist Templates</h2>
-{% if current_user.role in ['admin','root'] %}
-  <a class="btn" href="{{ url_for('maintenance.checklist_template_add') }}">+ Add Template</a>
+{% if can_tpl_create() %}
+  <a class="btn btn-primary" href="{{ url_for('maintenance.checklist_template_add') }}">+ Add Template</a>
 {% endif %}
 <table class="table">
   <tr><th>Code</th><th>Name (EN/RU)</th><th>Default Freq</th><th></th></tr>
@@ -12,7 +12,14 @@
       <td>{{ it.code }}</td>
       <td>{{ it.name_en }} / {{ it.name_ru }}</td>
       <td>{{ it.default_frequency }}</td>
-      <td>{% if current_user.role in ['admin','root'] %}<a href="{{ url_for('maintenance.checklist_template_edit', tid=it.id) }}">Edit</a>{% endif %}</td>
+      <td>
+        {% if can_tpl_edit() %}<a href="{{ url_for('maintenance.checklist_template_edit', tid=it.id) }}">Edit</a>{% endif %}
+        {% if can_tpl_delete() %}
+          | <form method="post" action="{{ url_for('maintenance.checklist_template_delete', tid=it.id) }}" style="display:inline">
+              <button class="btn btn-link p-0" onclick="return confirm('Delete?')">Delete</button>
+            </form>
+        {% endif %}
+      </td>
     </tr>
   {% endfor %}
 </table>

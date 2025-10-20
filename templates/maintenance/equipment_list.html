@@ -5,18 +5,26 @@
 <form method="get" class="mb-2">
   <input name="q" value="{{ q }}" placeholder="Search code/name/category"/>
   <button type="submit">Search</button>
-  {% if current_user.role in ['admin', 'root'] %}
-  <a href="{{ url_for('maintenance.equipment_add') }}" class="btn">+ Add</a>
+  {% if can_equipment_create() %}
+  <a href="{{ url_for('maintenance.equipment_add') }}" class="btn btn-primary">+ Add</a>
   {% endif %}
 </form>
 <table class="table">
-  <tr><th>Code</th><th>Name</th><th>Category</th><th>Location</th></tr>
+  <tr><th>Code</th><th>Name</th><th>Category</th><th>Location</th><th></th></tr>
   {% for it in items %}
     <tr>
       <td><a href="{{ url_for('maintenance.equipment_view', eid=it.id) }}">{{ it.code }}</a></td>
       <td>{{ it.name }}</td>
       <td>{{ it.category or '' }}</td>
       <td>{{ it.location or '' }}</td>
+      <td>
+        {% if can_equipment_edit() %}<a href="{{ url_for('maintenance.equipment_edit', eid=it.id) }}">Edit</a>{% endif %}
+        {% if can_equipment_delete() %}
+          | <form method="post" action="{{ url_for('maintenance.equipment_delete', eid=it.id) }}" style="display:inline">
+              <button class="btn btn-link p-0" onclick="return confirm('Delete?')">Delete</button>
+            </form>
+        {% endif %}
+      </td>
     </tr>
   {% endfor %}
 </table>

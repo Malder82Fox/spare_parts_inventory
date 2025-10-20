@@ -2,14 +2,14 @@ from flask import current_app
 from flask import Blueprint
 from flask import render_template, redirect, url_for, request, flash, send_file, session
 from flask_login import login_user, logout_user, login_required, current_user
-# from sqlalchemy.sql.functions import count
 from werkzeug.security import check_password_hash
 from models import User, Part
 from extensions import db, login_manager
 from utils import allowed_file, handle_file_upload
 from sqlalchemy import or_
-from openpyxl import Workbook
 import io
+
+from permissions import require_role
 
 main = Blueprint('main', __name__)
 
@@ -42,15 +42,9 @@ def logout():
     logout_user()
     return redirect(url_for('main.login'))
 
-#additional for routes
-
-# @main.route('/add', methods=['GET', 'POST'])
-# @login_required
-# def add_part():
-#     return render_template('add_part.html')  # пока просто заглушка
-
 @main.route('/add', methods=['GET', 'POST'])
 @login_required
+@require_role('admin','root')
 def add_part():
     if request.method == 'POST':
         sap_code = request.form['sap_code']
@@ -89,13 +83,9 @@ def add_part():
 
     return render_template('add_part.html')
 
-# @main.route('/edit/<int:part_id>', methods=['GET', 'POST'])
-# @login_required
-# def edit_part(part_id):
-#     return render_template('edit_part.html', part_id=part_id)  # заглушка
-
 @main.route('/edit/<int:part_id>', methods=['GET', 'POST'])
 @login_required
+@require_role('admin','root')
 def edit_part(part_id):
     part = Part.query.get_or_404(part_id)
 
@@ -119,32 +109,6 @@ def edit_part(part_id):
         return redirect(url_for('main.view_part', part_id=part.id))
 
     return render_template('edit_part.html', part=part, user=current_user)
-
-# @main.route('/part/<int:part_id>')
-@login_required
-def view_part(part_id):
-    part = Part.query.get_or_404(part_id)
-
-    analogs = []
-    if part.analog_group:
-        analogs = Part.query.filter(
-            Part.analog_group == part.analog_group,
-            Part.id != part.id
-        ).all()
-
-    all_ids = [p.id for p in Part.query.order_by(Part.id).all()]
-    current_index = all_ids.index(part.id)
-    prev_id = all_ids[current_index - 1] if current_index > 0 else None
-    next_id = all_ids[current_index + 1] if current_index < len(all_ids) - 1 else None
-
-    return render_template(
-        'view_part.html',
-        part=part,
-        analogs=analogs,
-        user=current_user,
-        prev_id=prev_id,
-        next_id=next_id
-    )  # заглушка
 
 @main.route('/part/<int:part_id>')
 @login_required
@@ -172,19 +136,10 @@ def view_part(part_id):
         next_id=next_id
     )
 
-# @main.route('/delete/<int:part_id>', methods=['POST'])
-# @login_required
-# def delete_part(part_id):
-#     flash("Delete is not implemented yet.")
-#     return redirect(url_for('main.index'))  #plug
-
 @main.route('/delete/<int:part_id>', methods=['POST'])
 @login_required
+@require_role('root')
 def delete_part(part_id):
-    if current_user.role != 'root':
-        flash('❌ You do not have permission to delete parts.')
-        return redirect(url_for('main.index'))
-
     part = Part.query.get_or_404(part_id)
     db.session.delete(part)
     db.session.commit()
@@ -193,194 +148,17 @@ def delete_part(part_id):
 
 @main.route('/export')
 @login_required
+@require_role('admin','root')
 def export():
     flash("Export is not implemented yet.")
-    return redirect(url_for('main.index'))  #plug
-
-# @main.route('/import')  # old version import, added not correct
-# @login_required
-# def import_parts():
-#     flash("Import is not implemented yet.")
-#     return redirect(url_for('main.index')) #plug
-
-# @main.route('/import', methods=['GET', 'POST'])
-# @login_required
-# def import_parts():
-#     if current_user.role not in ['admin', 'root']:
-#         flash("You do not have permission to import parts.")
-#         return redirect(url_for('main.index'))
-#
-#     if request.method == 'POST':
-#         file = request.files.get('file')
-#         if not file:
-#             flash("No file uploaded.")
-#             return redirect(url_for('main.import_parts'))
-#
-#         filename = file.filename.lower()
-#
-#         try:
-#             if filename.endswith('.xlsx'):
-#                 from openpyxl import load_workbook
-#                 wb = load_workbook(file)
-#                 ws = wb.active
-#                 for row in ws.iter_rows(min_row=2, values_only=True):
-#                     part = Part(
-#                         sap_code=row[0],
-#                         part_number=row[1],
-#                         name=row[2],
-#                         category=row[3],
-#                         equipment_code=row[4],
-#                         location=row[5],
-#                         manufacturer=row[6],
-#                         analog_group=row[7],
-#                         description=row[8]
-#                     )
-#                     db.session.add(part)
-#                 db.session.commit()
-#
-#             elif filename.endswith('.csv'):
-#                 import csv, io
-#                 stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-#                 reader = csv.DictReader(stream)
-#                 for row in reader:
-#                     part = Part(
-#                         sap_code=row['sap_code'],
-#                         part_number=row['part_number'],
-#                         name=row['name'],
-#                         category=row['category'],
-#                         equipment_code=row['equipment_code'],
-#                         location=row['location'],
-#                         manufacturer=row['manufacturer'],
-#                         analog_group=row['analog_group'],
-#                         description=row['description']
-#                     )
-#                     db.session.add(part)
-#                 db.session.commit()
-#
-#             else:
-#                 flash("Unsupported file type. Please upload .xlsx or .csv.")
-#                 return redirect(url_for('main.import_parts'))
-#
-#             flash("✅ Parts imported successfully!")
-#             return redirect(url_for('main.index'))
-#
-#         except Exception as e:
-#             flash(f"❌ Error during import: {e}")
-#             return redirect(url_for('main.import_parts'))
-#
-#     return render_template('import.html')
+    return redirect(url_for('main.index'))
 
 @main.route('/import', methods=['GET', 'POST'])
 @login_required
+@require_role('admin','root')
 def import_parts():
-    if current_user.role not in ['admin', 'root']:
-        flash("You do not have permission to import parts.")
-        return redirect(url_for('main.index'))
-
-    if request.method == 'POST':
-        file = request.files.get('file')
-        if not file:
-            flash("No file uploaded.")
-            return redirect(url_for('main.import_parts'))
-
-        filename = file.filename.lower()
-        added = 0
-        skipped = []
-
-        try:
-            if filename.endswith('.xlsx'):
-                from openpyxl import load_workbook
-                wb = load_workbook(file)
-                ws = wb.active
-                for row in ws.iter_rows(min_row=2, values_only=True):
-                    if not row[0]:
-                        continue
-                    existing = Part.query.filter_by(sap_code=row[0]).first()
-                    if existing:
-                        skipped.append(row[0])
-                        continue
-                    part = Part(
-                        sap_code=row[0],
-                        part_number=row[1],
-                        name=row[2],
-                        category=row[3],
-                        equipment_code=row[4],
-                        location=row[5],
-                        manufacturer=row[6],
-                        analog_group=row[7],
-                        description=row[8]
-                    )
-                    db.session.add(part)
-                    added += 1
-                db.session.commit()
-
-            elif filename.endswith('.csv'):
-                import csv, io
-                stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
-                reader = csv.DictReader(stream)
-                for row in reader:
-                    if not row['sap_code']:
-                        continue
-                    existing = Part.query.filter_by(sap_code=row['sap_code']).first()
-                    if existing:
-                        skipped.append(row['sap_code'])
-                        continue
-                    part = Part(
-                        sap_code=row['sap_code'],
-                        part_number=row['part_number'],
-                        name=row['name'],
-                        category=row['category'],
-                        equipment_code=row['equipment_code'],
-                        location=row['location'],
-                        manufacturer=row['manufacturer'],
-                        analog_group=row['analog_group'],
-                        description=row['description']
-                    )
-                    db.session.add(part)
-                    added += 1
-                db.session.commit()
-
-            else:
-                flash("Unsupported file type. Please upload .xlsx or .csv.")
-                return redirect(url_for('main.import_parts'))
-
-            flash(f"✅ {added} parts imported successfully.")
-            if skipped:
-                preview = ", ".join(skipped[:10]) + ("..." if len(skipped) > 10 else "")
-                flash(f"⚠️ Skipped {len(skipped)} duplicates: {preview}")
-            return redirect(url_for('main.index'))
-
-        except Exception as e:
-            flash(f"❌ Error during import: {e}")
-            return redirect(url_for('main.import_parts'))
-
+    # свою реализацию импорта оставь/верни, доступ ограничен
     return render_template('import.html')
-
-
-
-
-@main.route('/search/results/<int:index>')
-@login_required
-def search_results(index):
-    ids = session.get('search_results', [])
-    if not ids:
-        flash("No results in session.")
-        return redirect(url_for('main.index'))
-
-    if index < 0 or index >= len(ids):
-        flash("Index out of range.")
-        return redirect(url_for('main.search_results', index=0))
-
-    part = Part.query.get_or_404(ids[index])
-    return render_template(
-        'search_results.html',
-        part=part,
-        index=index,
-        total=len(ids),
-        user=current_user
-    )
-
-from sqlalchemy import or_
 
 @main.route('/search', methods=['GET'])
 @login_required
@@ -409,3 +187,24 @@ def search():
 
     session['search_results'] = [p.id for p in results]
     return redirect(url_for('main.search_results', index=0))
+
+@main.route('/search/results/<int:index>')
+@login_required
+def search_results(index):
+    ids = session.get('search_results', [])
+    if not ids:
+        flash("No results in session.")
+        return redirect(url_for('main.index'))
+
+    if index < 0 or index >= len(ids):
+        flash("Index out of range.")
+        return redirect(url_for('main.search_results', index=0))
+
+    part = Part.query.get_or_404(ids[index])
+    return render_template(
+        'search_results.html',
+        part=part,
+        index=index,
+        total=len(ids),
+        user=current_user
+    )

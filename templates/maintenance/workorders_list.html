@@ -1,40 +1,125 @@
 {% extends 'base.html' %}
 {% block sidebar %}{% include '_sidebar_maintenance.html' %}{% endblock %}
 {% block content %}
-<h2>Work Orders</h2>
-<form method="get">
-  <select name="status" onchange="this.form.submit()">
-    <option value="">All</option>
-    {% for s in ['open','in_progress','done','rejected'] %}
-      <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s }}</option>
-    {% endfor %}
-  </select>
-</form>
-<table class="table">
-  <tr><th>ID</th><th>Equipment</th><th>Template</th><th>Due</th><th>Status</th><th></th></tr>
-  {% for w in items %}
-    <tr>
-      <td>{{ w.id }}</td>
-      <td>{{ w.equipment.code }}</td>
-      <td>{{ w.template.code }}</td>
-      <td>{{ w.due_date }}</td>
-      <td>{{ w.status }}</td>
-      <td>
-        <a href="{{ url_for('maintenance.workorder_view', wid=w.id) }}">Open</a>
-        {% if w.status=='open' %}
-          | <a href="{{ url_for('maintenance.workorder_fill', wid=w.id) }}">Fill</a>
-        {% endif %}
-      </td>
-    </tr>
-  {% endfor %}
-</table>
-{% if current_user.role in ['admin','root'] %}
-<hr>
-<h3>Create quick WO</h3>
-<form method="post" action="{{ url_for('maintenance.workorder_new') }}">
-  <label>Equipment ID <input name="equipment_id" required></label>
-  <label>Template ID <input name="template_id" required></label>
-  <button type="submit">Create</button>
-</form>
+
+<h2 class="mb-3">Work Orders</h2>
+
+{# --- Панель фильтров --- #}
+{% set cnt_all = items|length %}
+{% set cnt_open = items|selectattr('status','equalto','open')|list|length %}
+{% set cnt_prog = items|selectattr('status','equalto','in_progress')|list|length %}
+{% set cnt_done = items|selectattr('status','equalto','done')|list|length %}
+{% set cnt_rej  = items|selectattr('status','equalto','rejected')|list|length %}
+
+<div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+  <div class="btn-group btn-group-sm" role="group" aria-label="Filters">
+    <a class="btn btn-outline-secondary {% if not status %}active{% endif %}"
+       href="{{ url_for('maintenance.workorders_list') }}">
+      All <span class="badge bg-secondary ms-1">{{ cnt_all }}</span>
+    </a>
+    <a class="btn btn-outline-warning {% if status=='open' %}active{% endif %}"
+       href="{{ url_for('maintenance.workorders_list', status='open') }}">
+      Open <span class="badge bg-warning text-dark ms-1">{{ cnt_open }}</span>
+    </a>
+    <a class="btn btn-outline-info {% if status=='in_progress' %}active{% endif %}"
+       href="{{ url_for('maintenance.workorders_list', status='in_progress') }}">
+      In&nbsp;progress <span class="badge bg-info text-dark ms-1">{{ cnt_prog }}</span>
+    </a>
+    <a class="btn btn-outline-success {% if status=='done' %}active{% endif %}"
+       href="{{ url_for('maintenance.workorders_list', status='done') }}">
+      Done <span class="badge bg-success ms-1">{{ cnt_done }}</span>
+    </a>
+    <a class="btn btn-outline-dark {% if status=='rejected' %}active{% endif %}"
+       href="{{ url_for('maintenance.workorders_list', status='rejected') }}">
+      Rejected <span class="badge bg-dark ms-1">{{ cnt_rej }}</span>
+    </a>
+  </div>
+</div>
+
+{% if items|length == 0 %}
+  <div class="alert alert-light border">No work orders for this filter.</div>
+{% else %}
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Equipment</th>
+          <th>Template</th>
+          <th>Due</th>
+          <th>Status</th>
+          <th class="text-nowrap">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for w in items %}
+        <tr>
+          <td>{{ w.id }}</td>
+          <td>{{ w.equipment.code }}</td>
+          <td>{{ w.template.code }}</td>
+          <td>{{ w.due_date }}</td>
+          <td>
+            {% if w.status == 'open' %}
+              <span class="badge bg-warning text-dark">open</span>
+            {% elif w.status == 'in_progress' %}
+              <span class="badge bg-info text-dark">in&nbsp;progress</span>
+            {% elif w.status == 'done' %}
+              <span class="badge bg-success">done</span>
+            {% elif w.status == 'rejected' %}
+              <span class="badge bg-dark">rejected</span>
+            {% else %}
+              <span class="badge bg-secondary">{{ w.status }}</span>
+            {% endif %}
+          </td>
+          <td class="text-nowrap">
+            <a href="{{ url_for('maintenance.workorder_view', wid=w.id) }}">Open</a>
+
+            {% if can_wo_fill() and w.status in ['open','in_progress'] %}
+              | <a href="{{ url_for('maintenance.workorder_fill', wid=w.id) }}">Fill</a>
+            {% endif %}
+
+            {% if can_wo_reopen() and w.status == 'done' %}
+              | <form method="post"
+                      action="{{ url_for('maintenance.workorder_reopen', wid=w.id) }}"
+                      style="display:inline">
+                  <button class="btn btn-link p-0 align-baseline">Reopen</button>
+                </form>
+            {% endif %}
+
+            {% if can_wo_delete() %}
+              | <form method="post"
+                      action="{{ url_for('maintenance.workorder_delete', wid=w.id) }}"
+                      style="display:inline">
+                  <button class="btn btn-link text-danger p-0 align-baseline"
+                          onclick="return confirm('Удалить WO #{{ w.id }}? Действие необратимо.')">
+                    Delete
+                  </button>
+                </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
 {% endif %}
+
+{% if can_wo_create_quick() %}
+  <hr>
+  <h3>Create quick WO</h3>
+  <form method="post" action="{{ url_for('maintenance.workorder_new') }}" class="row g-2">
+    <div class="col-auto">
+      <label class="col-form-label pe-2">Equipment ID</label>
+      <input class="form-control" name="equipment_id" required>
+    </div>
+    <div class="col-auto">
+      <label class="col-form-label pe-2">Template ID</label>
+      <input class="form-control" name="template_id" required>
+    </div>
+    <div class="col-auto align-self-end">
+      <button type="submit" class="btn btn-primary">Create</button>
+    </div>
+  </form>
+{% endif %}
+
 {% endblock %}

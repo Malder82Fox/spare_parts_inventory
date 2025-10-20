@@ -2,14 +2,16 @@
 {% block sidebar %}{% include '_sidebar_maintenance.html' %}{% endblock %}
 {% block content %}
 <h2>Maintenance Plans</h2>
-{% if current_user.role in ['admin','root'] %}
-  <a class="btn" href="{{ url_for('maintenance.maintenance_plan_add') }}">+ Add Plan</a>
+{% if can_plan_create() %}
+  <a class="btn btn-primary" href="{{ url_for('maintenance.maintenance_plan_add') }}">+ Add Plan</a>
+{% endif %}
+{% if can_run_scheduler() %}
   <form method="post" action="{{ url_for('maintenance.maintenance_schedule_run') }}" style="display:inline">
-    <button type="submit">Run Scheduler</button>
+    <button type="submit" class="btn btn-outline-dark">Run Scheduler</button>
   </form>
 {% endif %}
 <table class="table">
-  <tr><th>ID</th><th>Equipment</th><th>Template</th><th>Freq</th><th>Next Due</th></tr>
+  <tr><th>ID</th><th>Equipment</th><th>Template</th><th>Freq</th><th>Next Due</th><th></th></tr>
   {% for it in items %}
     <tr>
       <td>{{ it.id }}</td>
@@ -17,6 +19,14 @@
       <td>{{ it.template.code }}</td>
       <td>{{ it.frequency }}</td>
       <td>{{ it.next_due_date }}</td>
+      <td>
+        {% if can_plan_edit() %}<a href="{{ url_for('maintenance.maintenance_plan_edit', pid=it.id) }}">Edit</a>{% endif %}
+        {% if can_plan_delete() %}
+          | <form method="post" action="{{ url_for('maintenance.maintenance_plan_delete', pid=it.id) }}" style="display:inline">
+              <button class="btn btn-link p-0" onclick="return confirm('Delete?')">Delete</button>
+            </form>
+        {% endif %}
+      </td>
     </tr>
   {% endfor %}
 </table>
