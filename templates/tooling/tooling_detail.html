@@ -1,216 +1,86 @@
 {% extends 'base.html' %}
-{% block title %}Tool {{ tool.tool_code }}{% endblock %}
+{% block title %}Tool {{ item.tool_code }}{% endblock %}
 
 {% block content %}
-<h1 class="mb-3">Оснастка: {{ tool.tool_code }}</h1>
-
-<div class="d-flex flex-wrap gap-2 mb-3">
-  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('tooling.export_history_csv', tool_id=tool.id) }}">⬇️ Скачать историю (CSV)</a>
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="mb-0">BATCH # {{ item.tool_code }}</h1>
+  <div class="btn-group">
+    <!-- Назад на уровень выше (в список) с сохранением фильтров/пагинации -->
+    <a class="btn btn-outline-secondary" href="{{ back_url or url_for('tooling.list_tooling') }}">⬅ Назад в список</a>
+    {% if prev_id %}
+      <a class="btn btn-outline-secondary" href="{{ url_for('tooling.tooling_detail', tool_id=prev_id) }}">← Предыдущий</a>
+    {% endif %}
+    {% if next_id %}
+      <a class="btn btn-outline-secondary" href="{{ url_for('tooling.tooling_detail', tool_id=next_id) }}">Следующий →</a>
+    {% endif %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('tooling.export_history_csv', tool_id=item.id) }}">⬇️ CSV</a>
+  </div>
 </div>
 
-<div class="row g-3">
-  <div class="col-md-4">
-    <div class="card">
-      <div class="card-body">
-        <div class="mb-1"><b>Тип:</b> {{ tool.tool_type.name }} ({{ tool.tool_type.code }})</div>
-        <div class="mb-1">
-          <b>Статус:</b>
-          {% set badge = 'secondary' %}
-          {% if tool.status.value == 'INSTALLED' %}{% set badge='success' %}
-          {% elif tool.status.value in ['NEED_SERVICE','DEFECTIVE'] %}{% set badge='danger' %}
-          {% elif tool.status.value in ['IN_SERVICE'] %}{% set badge='warning' %}
-          {% elif tool.status.value in ['READY','STOCK'] %}{% set badge='info' %}
-          {% elif tool.status.value == 'SCRAPPED' %}{% set badge='dark' %}{% endif %}
-          <span class="badge bg-{{ badge }}">{{ tool.status.value }}</span>
-        </div>
-        <div class="mb-1"><b>Оборудование:</b> {{ tool.equipment.name if tool.equipment else '—' }}</div>
-        <div class="mb-1"><b>Локация:</b> {{ tool.current_location or '—' }}</div>
-        <div class="mb-1"><b>DIM:</b> {{ '%.3f'|format(tool.current_diameter) if tool.current_diameter is not none else '—' }}</div>
-        <div class="mb-1"><b>Min DIM:</b> {{ '%.3f'|format(tool.min_diameter) if tool.min_diameter is not none else '—' }}</div>
-        <div class="mb-1"><b>Regrinds:</b> {{ tool.regrind_count or 0 }}</div>
-        <div class="mb-1"><b>Установлено:</b> {{ tool.installed_at.strftime('%Y-%m-%d %H:%M') if tool.installed_at else '—' }}</div>
-        <div class="mb-1"><b>Последнее обслуживание:</b> {{ tool.last_service_at.strftime('%Y-%m-%d %H:%M') if tool.last_service_at else '—' }}</div>
-        <div class="mb-1"><b>Предпочитаемая роль:</b> {{ tool.intended_role or '—' }}</div>
-        <div class="mb-1"><b>Примечание:</b> {{ tool.notes or '—' }}</div>
-      </div>
-    </div>
+<div class="row gy-2 mb-3 small">
+  <div class="col-12 col-md-3"><strong>ROLE:</strong> {{ item.intended_role or '—' }}</div>
+  <div class="col-12 col-md-3"><strong>DIM:</strong> {{ item.current_diameter or '—' }}</div>
+  <div class="col-12 col-md-3"><strong>REGRIND count:</strong> {{ item.regrind_count or 0 }}</div>
+  <div class="col-12 col-md-3"><strong>Тип:</strong> {{ item.tool_type.name if item.tool_type else '—' }}</div>
+</div>
 
-    {% if current_user.role in ['user','admin','root'] %}
-    <div class="card mt-3">
-      <div class="card-header">Установить (ROLE/POSITION и причина обязательны)</div>
-      <div class="card-body">
-        <form class="mb-2" method="post" action="{{ url_for('tooling.install_tool', tool_id=tool.id) }}">
-          <div class="row g-2">
-            <div class="col-md-6">
-              <label class="form-label">Оборудование</label>
-              <select class="form-select" name="equipment_id" required>
-                {% for e in equipments %}
-                  <option value="{{ e.id }}">{{ e.name }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-6 col-md-3">
-              <label class="form-label">ROLE</label>
-              <input class="form-control" name="role" placeholder="IRONING" value="{{ tool.intended_role or '' }}" required>
-            </div>
-            <div class="col-6 col-md-3">
-              <label class="form-label">POSITION</label>
-              <input class="form-control" name="position" placeholder="#1">
-            </div>
-            <div class="col-6 col-md-3">
-              <label class="form-label">SHIFT</label>
-              <input class="form-control" name="shift" placeholder="A/B/C/D">
-            </div>
-            <div class="col-6 col-md-3">
-              <label class="form-label">DIM</label>
-              <input class="form-control" name="dimension" placeholder="">
-            </div>
-            <div class="col-6 col-md-3">
-              <label class="form-label">NEW DIM</label>
-              <input class="form-control" name="new_dimension" placeholder="">
-            </div>
-            <div class="col-12">
-              <label class="form-label">REASON *</label>
-              <input class="form-control" name="reason" placeholder="Почему ставим?" required>
-            </div>
-            <div class="col-12">
-              <label class="form-label">NOTE</label>
-              <input class="form-control" name="note" placeholder="Доп. комментарий">
-            </div>
-            <div class="col-12">
-              <label class="form-label">Примечание</label>
-              <input class="form-control" name="details" placeholder="details (опц.)">
-            </div>
-            <div class="col-12">
-              <button class="btn btn-primary" type="submit">Установить</button>
-            </div>
-          </div>
-        </form>
+{% if current_user.role == 'root' %}
+<div class="card mb-3">
+  <div class="card-header">Root-действия</div>
+  <div class="card-body">
+    <!-- Редактирование основных полей -->
+    <form class="row g-2 mb-2" method="post" action="{{ url_for('tooling.edit_tool', tool_id=item.id) }}">
+      <div class="col-md-4"><input class="form-control" name="serial_number" placeholder="Серийный №" value="{{ item.serial_number or '' }}"></div>
+      <div class="col-md-4"><input class="form-control" name="current_location" placeholder="Локация" value="{{ item.current_location or '' }}"></div>
+      <div class="col-md-4"><input class="form-control" name="vendor" placeholder="Поставщик" value="{{ item.vendor or '' }}"></div>
+      <div class="col-md-4"><input class="form-control" name="max_cycles_before_service" placeholder="Макс. циклов до ТО" value="{{ item.max_cycles_before_service or '' }}"></div>
+      <div class="col-md-4"><input class="form-control" name="intended_role" placeholder="Предпочитаемая роль" value="{{ item.intended_role or '' }}"></div>
+      <div class="col-12"><textarea class="form-control" name="notes" rows="2" placeholder="Примечание">{{ item.notes or '' }}</textarea></div>
+      <div class="col-12"><button class="btn btn-outline-primary" type="submit">Сохранить</button></div>
+    </form>
 
-        <form class="mb-2" method="post" action="{{ url_for('tooling.remove_tool', tool_id=tool.id) }}">
-          <div class="input-group">
-            <input class="form-control" name="to_location" placeholder="Переместить в локацию (опц.)">
-            <input class="form-control" name="details" placeholder="Примечание">
-            <button class="btn btn-warning" type="submit">Снять</button>
-          </div>
-        </form>
-
-        <form class="mb-2" method="post" action="{{ url_for('tooling.service_op', tool_id=tool.id) }}">
-          <div class="row g-2">
-            <div class="col-md-3">
-              <select class="form-select" name="op">
-                <option value="WASH">Мойка</option>
-                <option value="POLISH">Шлифовка</option>
-                <option value="INSPECT">Осмотр</option>
-                <option value="REPAIR">Ремонт</option>
-                <option value="REGRIND">Перешлифовка</option>
-                <option value="MARK_READY">Отметить Готова</option>
-                <option value="MARK_DEFECTIVE">Отметить Дефект</option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <input class="form-control" name="shift" placeholder="SHIFT">
-            </div>
-            <div class="col-md-2">
-              <input class="form-control" name="dimension" placeholder="DIM (до)">
-            </div>
-            <div class="col-md-2">
-              <input class="form-control" name="new_dimension" placeholder="NEW DIM (после)">
-            </div>
-            <div class="col-12">
-              <input class="form-control" name="reason" placeholder="REASON (почему проводим операцию)">
-            </div>
-            <div class="col-12">
-              <input class="form-control" name="note" placeholder="NOTE (опционально)">
-            </div>
-            <div class="col-md-6">
-              <input class="form-control" name="to_location" placeholder="Обновить локацию (опц.)">
-            </div>
-            <div class="col-md-6">
-              <input class="form-control" name="details" placeholder="Примечание (details)">
-            </div>
-            <div class="col-12">
-              <button class="btn btn-secondary" type="submit">Применить</button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    {% if current_user.role == 'root' %}
-    <div class="card mt-3">
-      <div class="card-header">Root-действия</div>
-      <div class="card-body">
-        <form class="mb-2" method="post" action="{{ url_for('tooling.edit_tool', tool_id=tool.id) }}">
-          <div class="mb-2"><input class="form-control" name="serial_number" placeholder="Серийный №" value="{{ tool.serial_number or '' }}"></div>
-          <div class="mb-2"><input class="form-control" name="current_location" placeholder="Локация" value="{{ tool.current_location or '' }}"></div>
-          <div class="mb-2"><input class="form-control" name="vendor" placeholder="Поставщик" value="{{ tool.vendor or '' }}"></div>
-          <div class="mb-2"><input class="form-control" name="max_cycles_before_service" placeholder="Максимум циклов до ТО" value="{{ tool.max_cycles_before_service or '' }}"></div>
-          <div class="mb-2"><input class="form-control" name="intended_role" placeholder="Предпочитаемая роль (e.g. IRONING)" value="{{ tool.intended_role or '' }}"></div>
-          <div class="mb-2"><textarea class="form-control" name="notes" rows="2" placeholder="Примечание">{{ tool.notes or '' }}</textarea></div>
-          <button class="btn btn-outline-primary" type="submit">Сохранить</button>
-        </form>
-
-        <form class="mb-2" method="post" action="{{ url_for('tooling.scrap_tool', tool_id=tool.id) }}" onsubmit="return confirm('Списать? История останется.');">
-          <div class="input-group">
-            <input class="form-control" name="details" placeholder="Причина">
-            <button class="btn btn-outline-danger" type="submit">Списать (SCRAP)</button>
-          </div>
-        </form>
-
-        <form method="post" action="{{ url_for('tooling.delete_tool', tool_id=tool.id) }}" onsubmit="return confirm('Мягкое удаление? Запись останется трассируемой.');">
-          <button class="btn btn-danger" type="submit">Soft Delete</button>
-        </form>
-      </div>
-    </div>
-    {% endif %}
+    <!-- Мягкое удаление -->
+    <form class="d-flex gap-2" method="post" action="{{ url_for('tooling.delete_tool', tool_id=item.id) }}" onsubmit="return confirm('Удалить (soft delete)? История останется.');">
+      <input class="form-control" name="details" placeholder="Причина (опц.)">
+      <button class="btn btn-danger" type="submit">Soft Delete</button>
+    </form>
   </div>
+</div>
+{% endif %}
 
-  <div class="col-md-8">
-    <div class="card">
-      <div class="card-header">История операций</div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-sm table-hover">
-            <thead class="table-light">
-              <tr>
-                <th>Время</th>
-                <th>Действие</th>
-                <th>Статус</th>
-                <th>Машина/Слот</th>
-                <th>SHIFT</th>
-                <th>DIM → NEW</th>
-                <th>REASON</th>
-                <th>Автор</th>
-                <th>Примечания</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for e in events %}
-              <tr>
-                <td>{{ e.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                <td>{{ e.action.value }}</td>
-                <td>{{ e.from_status.value if e.from_status else '—' }} → {{ e.to_status.value if e.to_status else '—' }}</td>
-                <td>
-                  {{ e.equipment.name if e.equipment else '—' }}
-                  {% if e.slot %} / {{ e.slot.role }} {{ e.slot.position }}{% endif %}
-                </td>
-                <td>{{ e.shift or '—' }}</td>
-                <td>
-                  {% if e.dimension is not none or e.new_dimension is not none %}
-                    {{ e.dimension if e.dimension is not none else '—' }} → {{ e.new_dimension if e.new_dimension is not none else '—' }}
-                  {% else %}—{% endif %}
-                </td>
-                <td>{{ e.reason or '—' }}</td>
-                <td>{{ e.created_by.email }}</td>
-                <td>{{ (e.details or '') ~ ('; ' ~ e.note if e.note else '') }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
+<h5 class="mt-4 mb-2">История событий</h5>
+<div class="table-responsive">
+  <table class="table table-sm table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>DATE/TIME</th>
+        <th>USER</th>
+        <th>ACTION</th>
+        <th>BM#</th>
+        <th>ROLE</th>
+        <th>POSITION</th>
+        <th>DIM</th>
+        <th>NEW DIM</th>
+        <th>REASON</th>
+        <th>NOTE</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in events %}
+      <tr>
+        <td>{{ e.happened_at.strftime('%Y-%m-%d %H:%M') if e.happened_at else '' }}</td>
+        <td>{{ e.user_name or '' }}</td>
+        <td><span class="badge text-bg-secondary">{{ e.action }}</span></td>
+        <td>{{ e.machine_name or '' }}</td>
+        <td>{{ e.role or '' }}</td>
+        <td>{{ e.position or '' }}</td>
+        <td>{{ e.dimension or '' }}</td>
+        <td>{{ e.new_dimension or '' }}</td>
+        <td>{{ e.reason or '' }}</td>
+        <td>{{ e.note or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% endblock %}

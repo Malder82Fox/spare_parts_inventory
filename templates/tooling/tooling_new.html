@@ -1,17 +1,33 @@
 {% extends 'base.html' %}
-{% block title %}New Tooling (Batch)# {% endblock %}
+{% block title %}Новый BATCH #{% endblock %}
 
 {% block content %}
 <h1 class="mb-3">Создать BATCH #</h1>
+
 <form method="post" class="row g-3">
   <div class="col-12 col-md-4">
     <label class="form-label">BATCH # *</label>
-    <input name="tool_code" class="form-control" placeholder="например IH-27" required>
+    <input name="tool_code" class="form-control" placeholder="например IH-112" required>
   </div>
+
   <div class="col-12 col-md-4">
-    <label class="form-label">Тип *</label>
-    <input name="type_code" class="form-control" placeholder="IRON-Ø63" required>
+    <label class="form-label">Тип (необязательно)</label>
+    <input name="type_code" class="form-control" placeholder="IRON-Ø63 или оставить пустым (GENERIC)">
   </div>
+
+  <div class="col-12 col-md-2">
+    <label class="form-label">ROLE</label>
+    <select name="role" class="form-select">
+      <option value="">—</option>
+      {% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+    </select>
+  </div>
+
+  <div class="col-12 col-md-2">
+    <label class="form-label">DIM</label>
+    <input name="dimension" class="form-control" placeholder="например 63.100">
+  </div>
+
   <div class="col-12">
     <button class="btn btn-primary">Сохранить</button>
     <a class="btn btn-outline-secondary" href="{{ url_for('tooling.list_tooling') }}">Отмена</a>

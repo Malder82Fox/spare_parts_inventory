@@ -25,8 +25,11 @@ def create_app():
 
     # 🔹 Tooling (инструментальная оснастка)
     # Важно: импортируем блюпринт и регистрируем модуль
+    # 🔹 Tooling (инструментальная оснастка)
     from tooling.routes_tooling import tooling_bp
     app.register_blueprint(tooling_bp, url_prefix="/tooling")
+#    from tooling.notuse_routes_tooling import tooling_bp
+#    app.register_blueprint(tooling_bp, url_prefix="/tooling")
 
     from ui_routes import ui
     app.register_blueprint(ui)  # домашняя "/"

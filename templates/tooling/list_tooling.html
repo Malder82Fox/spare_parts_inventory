@@ -11,36 +11,50 @@
   <a class="btn btn-outline-success" href="{{ url_for('tooling.import_tooling') }}">⬆ Импорт CSV</a>
 </div>
 
+{% if rows|length == 0 %}
+  <div class="alert alert-info">Пока нет данных по оснастке. Создайте первый BATCH #.</div>
+{% else %}
 <div class="table-responsive">
-<table class="table table-sm table-hover align-middle">
-  <thead class="table-light">
-    <tr>
-      <th>BATCH #</th>
-      <th>LAST DATE</th>
-      <th>LAST ACTION</th>
-      <th>STATUS</th>
-      <th>BM#</th>
-      <th>ROLE</th>
-      <th>POSITION</th>
-      <th>DIM</th>
-      <th>NEW DIM</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for r in rows %}
+  <table class="table table-sm table-hover align-middle">
+    <thead class="table-light">
       <tr>
-        <td><a href="#">{{ r["BATCH #"] }}</a></td>
-        <td>{{ r["LAST DATE"] or '' }}</td>
-        <td>{{ r["LAST ACTION"] or '' }}</td>
-        <td><span class="badge text-bg-{{ 'success' if r['STATUS']=='INSTALLED' else 'secondary' }}">{{ r["STATUS"] or '' }}</span></td>
-        <td>{{ r["BM#"] or '' }}</td>
-        <td>{{ r["ROLE"] or '' }}</td>
-        <td>{{ r["POSITION"] or '' }}</td>
-        <td>{{ r["DIM"] or '' }}</td>
-        <td>{{ r["NEW DIM"] or '' }}</td>
+        <th>BATCH #</th>
+        <th>LAST DATE</th>
+        <th>LAST ACTION</th>
+        <th>STATUS</th>
+        <th>BM#</th>
+        <th>ROLE</th>
+        <th>POSITION</th>
+        <th>DIM</th>
+        <th>NEW DIM</th>
       </tr>
-    {% endfor %}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>
+            {% if r.get('id') %}
+              <a href="{{ url_for('tooling.tooling_detail', tool_id=r['id']) }}">{{ r["BATCH #"] }}</a>
+            {% else %}
+              {{ r["BATCH #"] }}
+            {% endif %}
+          </td>
+          <td>{{ r["LAST DATE"] or '' }}</td>
+          <td>{{ r["LAST ACTION"] or '' }}</td>
+          <td>
+            <span class="badge text-bg-{{ 'success' if r['STATUS']=='INSTALLED' else 'secondary' }}">
+              {{ r["STATUS"] or '' }}
+            </span>
+          </td>
+          <td>{{ r["BM#"] or '' }}</td>
+          <td>{{ r["ROLE"] or '' }}</td>
+          <td>{{ r["POSITION"] or '' }}</td>
+          <td>{{ r["DIM"] or '' }}</td>
+          <td>{{ r["NEW DIM"] or '' }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
+{% endif %}
 {% endblock %}
