@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Import Tooling{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Импорт оснастки (CSV)</h1>
+<p class="text-muted">
+  Загрузите CSV в кодировке UTF-8. Рекомендуемые колонки:
+  <code>tool_code, tool_type_code, serial_number, intended_role, current_diameter, min_diameter, regrind_count, current_location, vendor, purchase_date (YYYY-MM-DD), cost, status, equipment_name, notes</code>.
+</p>
+<div class="mb-2">
+  <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('tooling.export_template_csv') }}">📄 Скачать шаблон CSV</a>
+</div>
+<form method="post" enctype="multipart/form-data" class="border rounded p-3">
+  <div class="mb-3">
+    <label class="form-label">Файл CSV *</label>
+    <input class="form-control" type="file" name="file" accept=".csv" required>
+  </div>
+  <button class="btn btn-primary" type="submit">Импортировать</button>
+  <a class="btn btn-secondary" href="{{ url_for('tooling.list_tooling') }}">Отмена</a>
+</form>
+{% endblock %}

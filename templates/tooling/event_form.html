@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block title %}Tooling — Событие{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Быстрое событие (как в Google Sheet)</h1>
+
+<form method="post" class="row g-3">
+  <!-- USER (от текущего пользователя) -->
+  <div class="col-12 col-md-3">
+    <label class="form-label">USER</label>
+    <input class="form-control" value="{{ current_user.username }}" disabled>
+  </div>
+
+  <!-- MACHINE -->
+  <div class="col-12 col-md-3">
+    <label class="form-label">MACHINE (BM#)</label>
+    <select name="machine_id" class="form-select">
+      <option value="">— не выбрано —</option>
+      {% for m in machines %}
+      <option value="{{ m.id }}">{{ m.name or m.code }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <!-- SHIFT -->
+  <div class="col-12 col-md-2">
+    <label class="form-label">SHIFT</label>
+    <select name="shift" class="form-select">
+      <option value="">—</option>
+      {% for s in shifts %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+    </select>
+  </div>
+
+  <!-- ACTION -->
+  <div class="col-12 col-md-4">
+    <label class="form-label">ACTION *</label>
+    <select name="action" id="action" class="form-select" required>
+      {% for a in actions %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+    </select>
+  </div>
+
+  <!-- ROLE -->
+  <div class="col-12 col-md-3">
+    <label class="form-label">ROLE</label>
+    <select name="role" class="form-select">
+      <option value="">—</option>
+      {% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+    </select>
+  </div>
+
+  <!-- POSITION -->
+  <div class="col-12 col-md-2">
+    <label class="form-label">POSITION</label>
+    <select name="position" class="form-select">
+      <option value="">—</option>
+      {% for p in positions %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+    </select>
+  </div>
+
+  <!-- REASON -->
+  <div class="col-12 col-md-7">
+    <label class="form-label">REASON</label>
+    <input name="reason" class="form-control" placeholder="Почему выполняем действие">
+  </div>
+
+  <!-- BATCH # -->
+  <div class="col-12 col-md-4">
+    <label class="form-label">BATCH # *</label>
+    <input name="batch_no" class="form-control" required>
+  </div>
+
+  <!-- DIM & NEW DIM -->
+  <div class="col-12 col-md-2">
+    <label class="form-label">DIM</label>
+    <input name="dimension" class="form-control" placeholder="например 63.080">
+  </div>
+  <div class="col-12 col-md-2">
+    <label class="form-label">NEW DIM</label>
+    <input name="new_dimension" id="new_dimension" class="form-control" placeholder="только для REGRIND">
+  </div>
+
+  <!-- NOTE -->
+  <div class="col-12">
+    <label class="form-label">NOTE</label>
+    <textarea name="note" class="form-control" rows="2"></textarea>
+  </div>
+
+  <div class="col-12">
+    <button class="btn btn-primary">Сохранить событие</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('tooling.list_tooling') }}">Отмена</a>
+  </div>
+</form>
+
+<script>
+  // Подсказка: поле NEW DIM нужно в основном для REGRIND
+  const actionSel = document.getElementById('action');
+  const newDim = document.getElementById('new_dimension');
+  function toggleNewDim() {
+    if (actionSel.value === 'REGRIND') {
+      newDim.removeAttribute('disabled');
+      newDim.placeholder = 'новый размер после REGRIND';
+    } else {
+      newDim.value = '';
+      newDim.setAttribute('disabled','disabled');
+      newDim.placeholder = 'только для REGRIND';
+    }
+  }
+  actionSel.addEventListener('change', toggleNewDim);
+  toggleNewDim();
+</script>
+{% endblock %}

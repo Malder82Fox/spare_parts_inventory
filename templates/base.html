@@ -42,6 +42,9 @@
        href="{{ url_for('maintenance.equipment_list') }}">🛠 Maintenance</a>
     <a class="btn btn-sm {% if request.endpoint and request.endpoint.startswith('main.') %}btn-primary{% else %}btn-outline-primary{% endif %}"
        href="{{ url_for('main.index') }}">📦 Parts</a>
+    <!-- 🧩 Tooling -->
+    <a class="btn btn-sm {% if request.blueprint=='tooling' %}btn-warning{% else %}btn-outline-warning{% endif %}"
+       href="{{ url_for('tooling.list_tooling') }}">🧩 Tooling</a>
   </nav>
 
   <!-- Флеш-сообщения -->
@@ -73,6 +76,8 @@
         <li class="breadcrumb-item"><a href="{{ url_for('maintenance.workorders_list') }}">Maintenance</a></li>
       {% elif request.endpoint and request.endpoint.startswith('main.') %}
         <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">Parts</a></li>
+      {% elif request.blueprint == 'tooling' %}
+        <li class="breadcrumb-item"><a href="{{ url_for('tooling.list_tooling') }}">Tooling</a></li>
       {% endif %}
       <li class="breadcrumb-item active" aria-current="page">
         {% if self.title and self.title() %}{{ self.title() }}{% else %}{{ request.endpoint }}{% endif %}

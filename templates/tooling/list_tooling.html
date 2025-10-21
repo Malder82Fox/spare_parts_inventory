@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Tooling — Список{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Tooling — агрегированное представление</h1>
+
+<div class="d-flex gap-2 mb-3">
+  <a class="btn btn-primary" href="{{ url_for('tooling.tooling_event') }}">➕ Быстрое событие</a>
+  <a class="btn btn-outline-secondary" href="{{ url_for('tooling.tooling_new') }}">Новый BATCH #</a>
+  <a class="btn btn-outline-success" href="{{ url_for('tooling.export_csv') }}">⬇ Экспорт CSV</a>
+  <a class="btn btn-outline-success" href="{{ url_for('tooling.import_tooling') }}">⬆ Импорт CSV</a>
+</div>
+
+<div class="table-responsive">
+<table class="table table-sm table-hover align-middle">
+  <thead class="table-light">
+    <tr>
+      <th>BATCH #</th>
+      <th>LAST DATE</th>
+      <th>LAST ACTION</th>
+      <th>STATUS</th>
+      <th>BM#</th>
+      <th>ROLE</th>
+      <th>POSITION</th>
+      <th>DIM</th>
+      <th>NEW DIM</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><a href="#">{{ r["BATCH #"] }}</a></td>
+        <td>{{ r["LAST DATE"] or '' }}</td>
+        <td>{{ r["LAST ACTION"] or '' }}</td>
+        <td><span class="badge text-bg-{{ 'success' if r['STATUS']=='INSTALLED' else 'secondary' }}">{{ r["STATUS"] or '' }}</span></td>
+        <td>{{ r["BM#"] or '' }}</td>
+        <td>{{ r["ROLE"] or '' }}</td>
+        <td>{{ r["POSITION"] or '' }}</td>
+        <td>{{ r["DIM"] or '' }}</td>
+        <td>{{ r["NEW DIM"] or '' }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

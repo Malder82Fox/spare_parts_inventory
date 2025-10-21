@@ -23,12 +23,19 @@ def create_app():
     from maintenance_routes import maintenance_bp
     app.register_blueprint(maintenance_bp, url_prefix="/maintenance")
 
+    # 🔹 Tooling (инструментальная оснастка)
+    # Важно: импортируем блюпринт и регистрируем модуль
+    from tooling.routes_tooling import tooling_bp
+    app.register_blueprint(tooling_bp, url_prefix="/tooling")
+
     from ui_routes import ui
     app.register_blueprint(ui)  # домашняя "/"
 
     # DB
     with app.app_context():
-        import maintenance_models  # чтобы модели ТО загрузились
+        # Важно: модели должны быть импортированы до create_all()
+        import maintenance_models   # чтобы модели ТО загрузились
+        import tooling.models_tooling  # 🔹 модели оснастки
         db.create_all()
 
     # uploads dir
