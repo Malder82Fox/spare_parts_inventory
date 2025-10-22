@@ -5,84 +5,90 @@
 <h1 class="mb-3">Быстрое событие (как в Google Sheet)</h1>
 
 <form method="post" class="row g-3">
-  <!-- USER (от текущего пользователя) -->
+
   <div class="col-12 col-md-3">
     <label class="form-label">USER</label>
-    <input class="form-control" value="{{ current_user.username }}" disabled>
+    <input class="form-control" value="{{ current_user.username if current_user.is_authenticated else 'user' }}" disabled>
   </div>
 
-  <!-- MACHINE -->
   <div class="col-12 col-md-3">
-    <label class="form-label">MACHINE (BM#)</label>
-    <select name="machine_id" class="form-select">
+    <label class="form-label">MACHINE (BM#) <span id="star-machine" class="text-danger" style="display:none">*</span></label>
+    <select name="machine_id" id="machine" class="form-select">
       <option value="">— не выбрано —</option>
       {% for m in machines %}
-      <option value="{{ m.id }}">{{ m.name or m.code }}</option>
+        <option value="{{ m.id }}">{{ m.name or m.code }}</option>
       {% endfor %}
     </select>
   </div>
 
-  <!-- SHIFT -->
   <div class="col-12 col-md-2">
-    <label class="form-label">SHIFT</label>
-    <select name="shift" class="form-select">
+    <label class="form-label">SHIFT <span id="star-shift" class="text-danger" style="display:none">*</span></label>
+    <select name="shift" id="shift" class="form-select">
       <option value="">—</option>
-      {% for s in shifts %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+      {% for s in shifts %}
+        <option value="{{ s }}">{{ s }}</option>
+      {% endfor %}
     </select>
   </div>
 
-  <!-- ACTION -->
   <div class="col-12 col-md-4">
     <label class="form-label">ACTION *</label>
     <select name="action" id="action" class="form-select" required>
-      {% for a in actions %}<option value="{{ a }}">{{ a }}</option>{% endfor %}
+      {% for a in actions %}
+        <option value="{{ a }}" {% if a=='CREATE' %}selected{% endif %}>{{ a }}</option>
+      {% endfor %}
     </select>
   </div>
 
-  <!-- ROLE -->
   <div class="col-12 col-md-3">
-    <label class="form-label">ROLE</label>
-    <select name="role" class="form-select">
+    <label class="form-label">ROLE <span id="star-role" class="text-danger" style="display:none">*</span></label>
+    <select name="role" id="role" class="form-select">
       <option value="">—</option>
-      {% for r in roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+      {% for r in roles %}
+        <option value="{{ r }}">{{ r }}</option>
+      {% endfor %}
     </select>
   </div>
 
-  <!-- POSITION -->
-  <div class="col-12 col-md-2">
-    <label class="form-label">POSITION</label>
-    <select name="position" class="form-select">
+  <div class="col-12 col-md-3">
+    <label class="form-label">POSITION <span id="star-pos" class="text-danger" style="display:none">*</span></label>
+    <select name="position" id="position" class="form-select">
       <option value="">—</option>
-      {% for p in positions %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+      {% for p in positions %}
+        <option value="{{ p }}">{{ p }}</option>
+      {% endfor %}
     </select>
   </div>
 
-  <!-- REASON -->
-  <div class="col-12 col-md-7">
-    <label class="form-label">REASON</label>
-    <input name="reason" class="form-control" placeholder="Почему выполняем действие">
+  <div class="col-12 col-md-6">
+    <label class="form-label">REASON <span id="star-reason" class="text-danger" style="display:none">*</span></label>
+    <select name="reason" id="reason" class="form-select">
+      <option value="">— выберите причину —</option>
+      {% for r in reasons %}
+        <option value="{{ r }}">{{ r }}</option>
+      {% endfor %}
+    </select>
+    <div class="form-text">Для INSTALL выбор причины обязателен.</div>
   </div>
 
-  <!-- BATCH # -->
   <div class="col-12 col-md-4">
     <label class="form-label">BATCH # *</label>
-    <input name="batch_no" class="form-control" required>
+    <input name="batch_no" class="form-control" placeholder="например IH-112" required>
   </div>
 
-  <!-- DIM & NEW DIM -->
-  <div class="col-12 col-md-2">
-    <label class="form-label">DIM</label>
-    <input name="dimension" class="form-control" placeholder="например 63.080">
+  <div class="col-12 col-md-4">
+    <label class="form-label">DIM <span id="star-dim" class="text-danger" style="display:none">*</span></label>
+    <input name="dimension" id="dimension" class="form-control" placeholder="например 63.080">
   </div>
-  <div class="col-12 col-md-2">
+
+  <div class="col-12 col-md-4">
     <label class="form-label">NEW DIM</label>
-    <input name="new_dimension" id="new_dimension" class="form-control" placeholder="только для REGRIND">
+    <input name="new_dimension" class="form-control" placeholder="только для REGRIND">
   </div>
 
-  <!-- NOTE -->
   <div class="col-12">
     <label class="form-label">NOTE</label>
-    <textarea name="note" class="form-control" rows="2"></textarea>
+    <textarea name="note" class="form-control" rows="3"></textarea>
   </div>
 
   <div class="col-12">
@@ -92,20 +98,42 @@
 </form>
 
 <script>
-  // Подсказка: поле NEW DIM нужно в основном для REGRIND
-  const actionSel = document.getElementById('action');
-  const newDim = document.getElementById('new_dimension');
-  function toggleNewDim() {
-    if (actionSel.value === 'REGRIND') {
-      newDim.removeAttribute('disabled');
-      newDim.placeholder = 'новый размер после REGRIND';
-    } else {
-      newDim.value = '';
-      newDim.setAttribute('disabled','disabled');
-      newDim.placeholder = 'только для REGRIND';
-    }
+  // Переключение "обязательных" полей для ACTION=INSTALL
+  const actionSel   = document.getElementById('action');
+  const roleSel     = document.getElementById('role');
+  const posSel      = document.getElementById('position');
+  const machSel     = document.getElementById('machine');
+  const shiftSel    = document.getElementById('shift');
+  const reasonSel   = document.getElementById('reason');
+  const dimInp      = document.getElementById('dimension');
+
+  const starRole    = document.getElementById('star-role');
+  const starPos     = document.getElementById('star-pos');
+  const starMach    = document.getElementById('star-machine');
+  const starShift   = document.getElementById('star-shift');
+  const starReason  = document.getElementById('star-reason');
+  const starDim     = document.getElementById('star-dim');
+
+  function setReq(el, star, on) {
+    if (on) { el.setAttribute('required', 'required'); star.style.display = ''; }
+    else    { el.removeAttribute('required'); star.style.display = 'none'; }
   }
-  actionSel.addEventListener('change', toggleNewDim);
-  toggleNewDim();
+
+  function toggleRequired() {
+    const isInstall = actionSel.value === 'INSTALL';
+    setReq(machSel,  starMach,  isInstall);
+    setReq(shiftSel, starShift, isInstall);
+    setReq(roleSel,  starRole,  isInstall);
+    setReq(reasonSel,starReason,isInstall);
+    setReq(dimInp,   starDim,   isInstall);
+
+    // Для ROLE=IRONING — POSITION обязательно
+    const needPos = isInstall && roleSel.value === 'IRONING';
+    setReq(posSel, starPos, needPos);
+  }
+
+  actionSel.addEventListener('change', toggleRequired);
+  roleSel.addEventListener('change', toggleRequired);
+  toggleRequired();
 </script>
 {% endblock %}
