@@ -5,15 +5,15 @@
 <div class="d-flex align-items-center justify-content-between mb-3">
   <h1 class="mb-0">BATCH # {{ item.tool_code }}</h1>
   <div class="btn-group">
-    <!-- Назад на уровень выше (в список) с сохранением фильтров/пагинации -->
-    <a class="btn btn-outline-secondary" href="{{ back_url or url_for('tooling.list_tooling') }}">⬅ Назад в список</a>
+    <a class="btn btn-outline-secondary" href="{{ request.referrer or url_for('tooling.list_tooling') }}">⬅ Назад</a>
     {% if prev_id %}
       <a class="btn btn-outline-secondary" href="{{ url_for('tooling.tooling_detail', tool_id=prev_id) }}">← Предыдущий</a>
     {% endif %}
     {% if next_id %}
       <a class="btn btn-outline-secondary" href="{{ url_for('tooling.tooling_detail', tool_id=next_id) }}">Следующий →</a>
     {% endif %}
-    <a class="btn btn-outline-secondary" href="{{ url_for('tooling.export_history_csv', tool_id=item.id) }}">⬇️ CSV</a>
+    <a class="btn btn-outline-success" href="{{ url_for('tooling.export_tool_events', tool_id=item.id) }}">⬇ Экспорт истории (CSV)</a>
+    <a class="btn btn-primary" href="{{ url_for('tooling.tooling_event') }}">➕ Событие</a>
   </div>
 </div>
 
@@ -21,32 +21,8 @@
   <div class="col-12 col-md-3"><strong>ROLE:</strong> {{ item.intended_role or '—' }}</div>
   <div class="col-12 col-md-3"><strong>DIM:</strong> {{ item.current_diameter or '—' }}</div>
   <div class="col-12 col-md-3"><strong>REGRIND count:</strong> {{ item.regrind_count or 0 }}</div>
-  <div class="col-12 col-md-3"><strong>Тип:</strong> {{ item.tool_type.name if item.tool_type else '—' }}</div>
+  <div class="col-12 col-md-3"><strong>Тип:</strong> {{ item.type.name if item.type else '—' }}</div>
 </div>
-
-{% if current_user.role == 'root' %}
-<div class="card mb-3">
-  <div class="card-header">Root-действия</div>
-  <div class="card-body">
-    <!-- Редактирование основных полей -->
-    <form class="row g-2 mb-2" method="post" action="{{ url_for('tooling.edit_tool', tool_id=item.id) }}">
-      <div class="col-md-4"><input class="form-control" name="serial_number" placeholder="Серийный №" value="{{ item.serial_number or '' }}"></div>
-      <div class="col-md-4"><input class="form-control" name="current_location" placeholder="Локация" value="{{ item.current_location or '' }}"></div>
-      <div class="col-md-4"><input class="form-control" name="vendor" placeholder="Поставщик" value="{{ item.vendor or '' }}"></div>
-      <div class="col-md-4"><input class="form-control" name="max_cycles_before_service" placeholder="Макс. циклов до ТО" value="{{ item.max_cycles_before_service or '' }}"></div>
-      <div class="col-md-4"><input class="form-control" name="intended_role" placeholder="Предпочитаемая роль" value="{{ item.intended_role or '' }}"></div>
-      <div class="col-12"><textarea class="form-control" name="notes" rows="2" placeholder="Примечание">{{ item.notes or '' }}</textarea></div>
-      <div class="col-12"><button class="btn btn-outline-primary" type="submit">Сохранить</button></div>
-    </form>
-
-    <!-- Мягкое удаление -->
-    <form class="d-flex gap-2" method="post" action="{{ url_for('tooling.delete_tool', tool_id=item.id) }}" onsubmit="return confirm('Удалить (soft delete)? История останется.');">
-      <input class="form-control" name="details" placeholder="Причина (опц.)">
-      <button class="btn btn-danger" type="submit">Soft Delete</button>
-    </form>
-  </div>
-</div>
-{% endif %}
 
 <h5 class="mt-4 mb-2">История событий</h5>
 <div class="table-responsive">
@@ -68,8 +44,8 @@
     <tbody>
       {% for e in events %}
       <tr>
-        <td>{{ e.happened_at.strftime('%Y-%m-%d %H:%M') if e.happened_at else '' }}</td>
-        <td>{{ e.user_name or '' }}</td>
+        <td>{{ e.happened_at }}</td>
+        <td>{{ e.user_name }}</td>
         <td><span class="badge text-bg-secondary">{{ e.action }}</span></td>
         <td>{{ e.machine_name or '' }}</td>
         <td>{{ e.role or '' }}</td>

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}Tooling — Импорт{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Импорт оснастки (CSV)</h1>
+<p class="text-muted mb-2">
+  Импорт понимает два формата CSV-заголовков:<br>
+  <code>ACTION, ROLE, POSITION, REASON, DIM, BATCH #</code> (как в таблице) <br>
+  <code>batch_no, happened_at, action, user, shift, machine_code, role, position, reason, dimension, new_dimension, note</code> (журнал событий)
+</p>
+
+<div class="d-flex gap-2 mb-3">
+  <a class="btn btn-outline-secondary" href="{{ url_for('tooling.export_template_csv') }}">⬇ Шаблон (friendly)</a>
+  <a class="btn btn-outline-secondary" href="{{ url_for('tooling.export_template_events_csv') }}">⬇ Шаблон (events)</a>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="border rounded p-3 mb-4">
+  <div class="mb-3">
+    <label class="form-label">Файл CSV</label>
+    <input type="file" name="file" class="form-control" accept=".csv" required>
+    <div class="form-text">Кодировка: UTF-8 (желательно UTF-8 с BOM). Разделитель — запятая.</div>
+  </div>
+  <button class="btn btn-primary">Импортировать</button>
+  <a class="btn btn-outline-secondary" href="{{ url_for('tooling.list_tooling') }}">Назад к списку</a>
+</form>
+
+{% if report %}
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title mb-3">Результат импорта</h5>
+    <ul class="mb-0">
+      <li>Режим: <code>{{ report.mode }}</code></li>
+      <li>Создано инструментов: <strong>{{ report.created }}</strong></li>
+      <li>Обновлено карточек: <strong>{{ report.updated }}</strong></li>
+      <li>Записано событий: <strong>{{ report.events }}</strong></li>
+      <li>Ошибок: <strong>{{ report.errors|length }}</strong></li>
+    </ul>
+  </div>
+</div>
+
+{% if report.errors and report.errors|length %}
+<div class="alert alert-warning mt-3">
+  <div class="fw-bold">Список ошибок:</div>
+  <ul class="mb-0">
+    {% for e in report.errors %}
+      <li>{{ e }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
