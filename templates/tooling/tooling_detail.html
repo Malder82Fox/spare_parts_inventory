@@ -1,60 +1,83 @@
 {% extends 'base.html' %}
-{% block title %}Tool {{ item.tool_code }}{% endblock %}
+{% block title %}Tool {{ item.tool_code }} — История{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center justify-content-between mb-3">
-  <h1 class="mb-0">BATCH # {{ item.tool_code }}</h1>
-  <div class="btn-group">
-    <a class="btn btn-outline-secondary" href="{{ request.referrer or url_for('tooling.list_tooling') }}">⬅ Назад</a>
-    {% if prev_id %}
-      <a class="btn btn-outline-secondary" href="{{ url_for('tooling.tooling_detail', tool_id=prev_id) }}">← Предыдущий</a>
-    {% endif %}
-    {% if next_id %}
-      <a class="btn btn-outline-secondary" href="{{ url_for('tooling.tooling_detail', tool_id=next_id) }}">Следующий →</a>
-    {% endif %}
-    <a class="btn btn-outline-success" href="{{ url_for('tooling.export_tool_events', tool_id=item.id) }}">⬇ Экспорт истории (CSV)</a>
-    <a class="btn btn-primary" href="{{ url_for('tooling.tooling_event') }}">➕ Событие</a>
+<h1 class="mb-3">Tool {{ item.tool_code }} — история событий</h1>
+
+<div class="d-flex gap-2 mb-3">
+  <a class="btn btn-outline-secondary" href="{{ url_for('tooling.list_tooling') }}">← К списку</a>
+
+  {% if prev_id %}
+    <a class="btn btn-outline-primary" href="{{ url_for('tooling.tooling_detail', tool_id=prev_id) }}">⟵ Предыдущий</a>
+  {% else %}
+    <button class="btn btn-outline-primary" disabled>⟵ Предыдущий</button>
+  {% endif %}
+
+  {% if next_id %}
+    <a class="btn btn-outline-primary" href="{{ url_for('tooling.tooling_detail', tool_id=next_id) }}">Следующий ⟶</a>
+  {% else %}
+    <button class="btn btn-outline-primary" disabled>Следующий ⟶</button>
+  {% endif %}
+
+  <a class="btn btn-primary" href="{{ url_for('tooling.tooling_event') }}">➕ Новое событие</a>
+  <a class="btn btn-success" href="{{ url_for('tooling.export_tool_events', tool_id=item.id) }}">⬇ Экспорт событий CSV</a>
+</div>
+
+<div class="row g-3 mb-2">
+  <div class="col-12 col-md-3">
+    <div class="small text-muted">Тип</div>
+    <div class="fw-semibold">{{ item.type.name if item.type else item.tool_type_id }}</div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="small text-muted">Предпочт. роль</div>
+    <div class="fw-semibold">{{ item.intended_role or '—' }}</div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="small text-muted">Текущий DIM</div>
+    <div class="fw-semibold">{{ item.current_diameter if item.current_diameter is not none else '—' }}</div>
+  </div>
+  <div class="col-12 col-md-3">
+    <div class="small text-muted">Статус</div>
+    <div class="fw-semibold">{{ item.status or '—' }}</div>
   </div>
 </div>
 
-<div class="row gy-2 mb-3 small">
-  <div class="col-12 col-md-3"><strong>ROLE:</strong> {{ item.intended_role or '—' }}</div>
-  <div class="col-12 col-md-3"><strong>DIM:</strong> {{ item.current_diameter or '—' }}</div>
-  <div class="col-12 col-md-3"><strong>REGRIND count:</strong> {{ item.regrind_count or 0 }}</div>
-  <div class="col-12 col-md-3"><strong>Тип:</strong> {{ item.type.name if item.type else '—' }}</div>
-</div>
-
-<h5 class="mt-4 mb-2">История событий</h5>
 <div class="table-responsive">
   <table class="table table-sm table-hover align-middle">
     <thead class="table-light">
       <tr>
-        <th>DATE/TIME</th>
-        <th>USER</th>
+        <th>DATE</th>
         <th>ACTION</th>
+        <th>FROM</th>
+        <th>TO</th>
         <th>BM#</th>
         <th>ROLE</th>
         <th>POSITION</th>
+        <th>SHIFT</th>
+        <th>REASON</th>
         <th>DIM</th>
         <th>NEW DIM</th>
-        <th>REASON</th>
+        <th>USER</th>
         <th>NOTE</th>
       </tr>
     </thead>
     <tbody>
       {% for e in events %}
-      <tr>
-        <td>{{ e.happened_at }}</td>
-        <td>{{ e.user_name }}</td>
-        <td><span class="badge text-bg-secondary">{{ e.action }}</span></td>
-        <td>{{ e.machine_name or '' }}</td>
-        <td>{{ e.role or '' }}</td>
-        <td>{{ e.position or '' }}</td>
-        <td>{{ e.dimension or '' }}</td>
-        <td>{{ e.new_dimension or '' }}</td>
-        <td>{{ e.reason or '' }}</td>
-        <td>{{ e.note or '' }}</td>
-      </tr>
+        <tr>
+          <td class="text-nowrap">{{ e.happened_at.strftime('%Y-%m-%d %H:%M:%S') if e.happened_at else '' }}</td>
+          <td>{{ e.action }}</td>
+          <td>{{ e.from_status or '' }}</td>
+          <td>{{ e.to_status or '' }}</td>
+          <td>{{ e.machine_name or '' }}</td>
+          <td>{{ e.role or '' }}</td>
+          <td>{{ e.position or '' }}</td>
+          <td>{{ e.shift or '' }}</td>
+          <td>{{ e.reason or '' }}</td>
+          <td>{{ e.dimension if e.dimension is not none else '' }}</td>
+          <td>{{ e.new_dimension if e.new_dimension is not none else '' }}</td>
+          <td>{{ e.user_name or '' }}</td>
+          <td class="text-break">{{ e.note or '' }}</td>
+        </tr>
       {% endfor %}
     </tbody>
   </table>

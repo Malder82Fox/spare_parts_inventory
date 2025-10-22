@@ -6,7 +6,10 @@ from decimal import Decimal, InvalidOperation
 import io
 import csv
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, make_response
+from flask import (
+    Blueprint, render_template, request, redirect, url_for,
+    flash, make_response, jsonify
+)
 from flask_login import login_required, current_user
 from sqlalchemy import desc
 
@@ -21,48 +24,18 @@ from permissions import role_required
 
 tooling_bp = Blueprint("tooling", __name__)
 
-# ----------------------------- СПРАВОЧНИКИ UI ------------------------------ #
-# Фиксированный список смен
+# ---------- Справочники для UI ----------
 SHIFT_CHOICES = ["Tooling room", "A", "B", "C", "D"]
 
-# Причины для INSTALL (выпадающий список)
 INSTALL_REASONS = [
-    "Top wall variation",
-    "Top wall oversize",
-    "Short trim",
-    "Sensor short can",
-    "Sugar scoop",
-    "Short can",
-    "Die scratches",
-    "Die worn",
-    "Oval can",
-    "Progression",
-    "Mid wall below specification",
-    "Progression mark horizontal",
-    "Progression mark vertical",
-    "Top wall undersize",
-    "Defective die",
-    "Die damage",
-    "Trial",
-    "No reason",
-    "Pin hole",
-    "Pick up",
-    "Shadows",
-    "Roll back",
-    "Metal exposure",
-    "Chime smile",
-    "Dome depth",
-    "Wrinkled domes",
-    "Slivers",
-    "Burrs",
-    "Uneven trim",
-    "Trimmer jams",
-    "Split flanges",
-    "Scheduled change",
-    "New",
+    "Top wall variation","Top wall oversize","Short trim","Sensor short can","Sugar scoop","Short can",
+    "Die scratches","Die worn","Oval can","Progression","Mid wall below specification",
+    "Progression mark horizontal","Progression mark vertical","Top wall undersize","Defective die","Die damage",
+    "Trial","No reason","Pin hole","Pick up","Shadows","Roll back","Metal exposure","Chime smile","Dome depth",
+    "Wrinkled domes","Slivers","Burrs","Uneven trim","Trimmer jams","Split flanges","Scheduled change","New",
 ]
 
-# ----------------------------- ВСПОМОГАТЕЛЬНОЕ ----------------------------- #
+# ---------- Утилиты ----------
 def _parse_num(s: str | None):
     if not s:
         return None
@@ -73,20 +46,20 @@ def _parse_num(s: str | None):
         return None
 
 
-# --------------------------------- СПИСОК ---------------------------------- #
+# ---------- Список агрегированный ----------
 @tooling_bp.route("/")
 @login_required
 def list_tooling():
     tools = Tooling.query.filter_by(is_active=True).order_by(desc(Tooling.updated_at)).all()
     rows = []
     for t in tools:
-        a = t.last_aggregate()
+        a = t.last_aggregate()  # твой helper в модели возвращает словарь
         a["id"] = t.id
         rows.append(a)
     return render_template("tooling/list_tooling.html", rows=rows)
 
 
-# -------------------------------- КАРТОЧКА --------------------------------- #
+# ---------- Карточка BATCH ----------
 @tooling_bp.route("/<int:tool_id>")
 @login_required
 def tooling_detail(tool_id: int):
@@ -107,7 +80,7 @@ def tooling_detail(tool_id: int):
                            prev_id=prev_id, next_id=next_id)
 
 
-# ----------------------- СОЗДАНИЕ НОВОГО BATCH # --------------------------- #
+# ---------- Новый BATCH ----------
 @tooling_bp.route("/new", methods=["GET", "POST"])
 @role_required(["admin", "root"])
 def tooling_new():
@@ -135,7 +108,7 @@ def tooling_new():
             tool_code=code,
             tool_type_id=ttype.id,
             intended_role=role,
-            current_diameter=float(dim) if dim is not None else None
+            current_diameter=float(dim) if dim is not None else None,
         )
         db.session.add(tool)
         db.session.flush()
@@ -159,14 +132,10 @@ def tooling_new():
     return render_template("tooling/tooling_new.html", roles=ALLOWED_ROLES)
 
 
-# ----------------------- УНИВЕРСАЛЬНАЯ ФОРМА СОБЫТИЯ ----------------------- #
+# ---------- Универсальная форма события ----------
 @tooling_bp.route("/event", methods=["GET", "POST"])
 @login_required
 def tooling_event():
-    actions = ALLOWED_ACTIONS
-    roles = ALLOWED_ROLES
-    positions = ALLOWED_POSITIONS
-    shifts = SHIFT_CHOICES
     machines = Equipment.query.order_by(Equipment.name.asc()).all()
 
     if request.method == "POST":
@@ -181,7 +150,7 @@ def tooling_event():
         dim = _parse_num(request.form.get("dimension"))
         new_dim = _parse_num(request.form.get("new_dimension"))
 
-        if not batch or action not in actions:
+        if not batch or action not in ALLOWED_ACTIONS:
             flash("Укажи BATCH # и корректный ACTION.", "warning")
             return redirect(url_for("tooling.tooling_event"))
 
@@ -192,40 +161,30 @@ def tooling_event():
 
         equipment = Equipment.query.get(int(machine_id)) if machine_id else None
 
-        # --- INSTALL: строгие требования ---
+        # --- INSTALL: строгая валидация ---
         if action == "INSTALL":
-            # 1) ROLE обязателен; если IRONING — обязательна POSITION
             if not role:
                 flash("Для INSTALL необходимо указать ROLE.", "warning")
                 return redirect(url_for("tooling.tooling_event"))
             if role == "IRONING" and not position:
                 flash("Для INSTALL с ROLE=IRONING необходимо указать POSITION.", "warning")
                 return redirect(url_for("tooling.tooling_event"))
-            # 2) MACHINE обязателен
             if not equipment:
                 flash("Для INSTALL необходимо выбрать MACHINE (BM#).", "warning")
                 return redirect(url_for("tooling.tooling_event"))
-            # 3) SHIFT обязателен из списка
             if not shift or shift not in SHIFT_CHOICES:
                 flash("Для INSTALL необходимо выбрать SHIFT.", "warning")
                 return redirect(url_for("tooling.tooling_event"))
-            # 4) DIM обязателен (число)
             if dim is None:
                 flash("Для INSTALL необходимо указать DIM.", "warning")
                 return redirect(url_for("tooling.tooling_event"))
-            # REASON обязателен и из справочника
             if not reason or reason not in INSTALL_REASONS:
                 flash("Для INSTALL необходимо выбрать REASON из списка.", "warning")
                 return redirect(url_for("tooling.tooling_event"))
 
             install_tool(
-                tool=tool,
-                equipment=equipment,
-                role=role,
-                position=position,
-                shift=shift,
-                reason=reason,
-                dim=float(dim),
+                tool=tool, equipment=equipment, role=role, position=position,
+                shift=shift, reason=reason, dim=float(dim),
             )
             db.session.commit()
             flash("Установлено. Если слот был занят — предыдущий инструмент снят автоматически.", "success")
@@ -297,7 +256,17 @@ def tooling_event():
     )
 
 
-# -------------------------------- ЭКСПОРТ CSV ------------------------------- #
+# ---------- API: инфо по BATCH для автоподстановки DIM/ROLE ----------
+@tooling_bp.route("/api/tool/<string:batch_no>")
+@login_required
+def api_tool_info(batch_no: str):
+    tool = Tooling.query.filter_by(tool_code=batch_no.strip()).first()
+    if not tool:
+        return jsonify(ok=False, error="not found"), 404
+    return jsonify(ok=True, dim=tool.current_diameter, role=tool.intended_role)
+
+
+# ---------- Экспорт агрегированного списка ----------
 @tooling_bp.route("/export/csv")
 @role_required(["admin", "root"])
 def export_csv():
@@ -326,7 +295,50 @@ def export_csv():
     return resp
 
 
-# --------------------------------- ИМПОРТ ---------------------------------- #
+# ---------- Экспорт истории событий конкретного BATCH ----------
+@tooling_bp.route("/<int:tool_id>/export/events.csv")
+@login_required
+def export_tool_events(tool_id: int):
+    tool = Tooling.query.get_or_404(tool_id)
+    events = (ToolingEvent.query
+              .filter_by(tool_id=tool_id)
+              .order_by(ToolingEvent.happened_at.asc())
+              .all())
+
+    out = io.StringIO()
+    w = csv.writer(out, lineterminator="\n")
+    w.writerow([
+        "BATCH #", "DATE", "ACTION", "FROM_STATUS", "TO_STATUS",
+        "BM#", "ROLE", "POSITION", "SHIFT", "REASON",
+        "DIM", "NEW_DIM", "USER", "NOTE"
+    ])
+    for e in events:
+        w.writerow([
+            tool.tool_code,
+            e.happened_at.isoformat(sep=" ") if e.happened_at else "",
+            e.action or "",
+            e.from_status or "",
+            e.to_status or "",
+            (e.machine_name or ""),
+            e.role or "",
+            e.position or "",
+            e.shift or "",
+            e.reason or "",
+            e.dimension if e.dimension is not None else "",
+            e.new_dimension if e.new_dimension is not None else "",
+            e.user_name or "",
+            e.note or "",
+        ])
+
+    data = ("\ufeff" + out.getvalue()).encode("utf-8")
+    resp = make_response(data)
+    resp.headers["Content-Type"] = "text/csv; charset=utf-8"
+    resp.headers["Content-Disposition"] = \
+        f"attachment; filename=tool_{tool.tool_code}_events_{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
+    return resp
+
+
+# ---------- Заглушка импорта (пока) ----------
 @tooling_bp.route("/import", methods=["GET", "POST"])
 @role_required(["admin", "root"])
 def import_tooling():

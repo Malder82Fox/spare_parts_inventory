@@ -73,7 +73,7 @@
 
   <div class="col-12 col-md-4">
     <label class="form-label">BATCH # *</label>
-    <input name="batch_no" class="form-control" placeholder="например IH-112" required>
+    <input name="batch_no" id="batch_no" class="form-control" placeholder="например IH-112" required>
   </div>
 
   <div class="col-12 col-md-4">
@@ -106,6 +106,7 @@
   const shiftSel    = document.getElementById('shift');
   const reasonSel   = document.getElementById('reason');
   const dimInp      = document.getElementById('dimension');
+  const batchInp    = document.getElementById('batch_no');
 
   const starRole    = document.getElementById('star-role');
   const starPos     = document.getElementById('star-pos');
@@ -127,7 +128,6 @@
     setReq(reasonSel,starReason,isInstall);
     setReq(dimInp,   starDim,   isInstall);
 
-    // Для ROLE=IRONING — POSITION обязательно
     const needPos = isInstall && roleSel.value === 'IRONING';
     setReq(posSel, starPos, needPos);
   }
@@ -135,5 +135,35 @@
   actionSel.addEventListener('change', toggleRequired);
   roleSel.addEventListener('change', toggleRequired);
   toggleRequired();
+
+  // ---- Автоподстановка DIM/ROLE по BATCH при INSTALL ----
+  async function autofillByBatch() {
+    if (actionSel.value !== 'INSTALL') return;
+    const batch = (batchInp.value || '').trim();
+    if (!batch) return;
+
+    try {
+      const res = await fetch(`/tooling/api/tool/${encodeURIComponent(batch)}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.ok) return;
+
+      // Если DIM пустой — подставляем актуальный
+      if (!dimInp.value && data.dim != null) {
+        dimInp.value = data.dim;
+      }
+      // Если ROLE пустой — подставим рекомендуемую роль и пересчитаем обязательность POSITION
+      if (!roleSel.value && data.role) {
+        roleSel.value = data.role;
+        toggleRequired();
+      }
+    } catch(e) {
+      // тихо игнорируем
+    }
+  }
+
+  batchInp.addEventListener('blur',  autofillByBatch);
+  batchInp.addEventListener('change',autofillByBatch);
+  actionSel.addEventListener('change',autofillByBatch);
 </script>
 {% endblock %}
