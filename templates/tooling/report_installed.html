@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Отчёт — Установлено{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Отчёт: инструменты с STATUS = INSTALLED</h1>
+
+<div class="d-flex gap-2 mb-3">
+  <a class="btn btn-outline-secondary" href="{{ url_for('tooling.list_tooling') }}">← Назад к списку</a>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-sm table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>BATCH #</th>
+        <th>BM#</th>
+        <th>ROLE</th>
+        <th>POSITION</th>
+        <th>DIM</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td><a href="{{ url_for('tooling.tooling_detail', tool_id=r.id) }}">{{ r.batch }}</a></td>
+        <td>{{ r.bm or '' }}</td>
+        <td>{{ r.role or '' }}</td>
+        <td>{{ r.pos or '' }}</td>
+        <td>{{ r.dim if r.dim is not none else '' }}</td>
+      </tr>
+      {% endfor %}
+      {% if not rows %}
+      <tr><td colspan="5" class="text-center text-muted">Нет установленных инструментов</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

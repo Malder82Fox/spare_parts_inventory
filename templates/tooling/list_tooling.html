@@ -1,14 +1,21 @@
 {% extends 'base.html' %}
-{% block title %}Tooling — Список{% endblock %}
+{% block title %}Tooling — List{% endblock %}
 
 {% block content %}
-<h1 class="mb-3">Tooling — агрегированное представление</h1>
+<h1 class="mb-3">Tooling — STATUS BATCH#</h1>
 
-<div class="d-flex gap-2 mb-3">
-  <a class="btn btn-primary" href="{{ url_for('tooling.tooling_event') }}">➕ Быстрое событие</a>
-  <a class="btn btn-outline-secondary" href="{{ url_for('tooling.tooling_new') }}">Новый BATCH #</a>
-  <a class="btn btn-outline-success" href="{{ url_for('tooling.export_csv') }}">⬇ Экспорт CSV</a>
-  <a class="btn btn-outline-success" href="{{ url_for('tooling.import_tooling') }}">⬆ Импорт CSV</a>
+<div class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+  <a class="btn btn-primary" href="{{ url_for('tooling.tooling_event') }}">➕ New Event</a>
+  <a class="btn btn-outline-secondary" href="{{ url_for('tooling.tooling_new') }}">New BATCH #</a>
+  <a class="btn btn-outline-success" href="{{ url_for('tooling.export_csv') }}">⬇ Export CSV</a>
+  <a class="btn btn-outline-success" href="{{ url_for('tooling.import_tooling') }}">⬆ Import CSV</a>
+  <a class="btn btn-outline-info" href="{{ url_for('tooling.report_installed') }}">📊 REPORT: on BM#</a>
+
+  <!-- Быстрый поиск по BATCH # внутри модуля Tooling -->
+  <form class="ms-auto input-group" action="{{ url_for('tooling.tooling_search') }}" method="get" style="max-width:420px">
+    <input name="q" class="form-control" placeholder="Search by BATCH #">
+    <button class="btn btn-outline-primary">Search</button>
+  </form>
 </div>
 
 {% if rows|length == 0 %}

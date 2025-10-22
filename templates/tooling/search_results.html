@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Поиск BATCH — {{ q }}{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Результаты поиска по BATCH: «{{ q }}»</h1>
+
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <a class="btn btn-outline-secondary" href="{{ url_for('tooling.list_tooling') }}">← К списку Tooling</a>
+  <form class="input-group" action="{{ url_for('tooling.tooling_search') }}" method="get" style="max-width:420px">
+    <input name="q" class="form-control" placeholder="BATCH #" value="{{ q }}">
+    <button class="btn btn-primary">Искать</button>
+  </form>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-sm table-hover align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>BATCH #</th>
+        <th>LAST DATE</th>
+        <th>LAST ACTION</th>
+        <th>STATUS</th>
+        <th>BM#</th>
+        <th>ROLE</th>
+        <th>POSITION</th>
+        <th>DIM</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+        <tr>
+          <td><a href="{{ url_for('tooling.tooling_detail', tool_id=r.id) }}">{{ r.batch }}</a></td>
+          <td>{{ r.last_date or '' }}</td>
+          <td>{{ r.last_action or '' }}</td>
+          <td>
+            <span class="badge text-bg-{{ 'success' if r.status=='INSTALLED' else 'secondary' }}">{{ r.status or '' }}</span>
+          </td>
+          <td>{{ r.bm or '' }}</td>
+          <td>{{ r.role or '' }}</td>
+          <td>{{ r.pos or '' }}</td>
+          <td>{{ r.dim if r.dim is not none else '' }}</td>
+        </tr>
+      {% endfor %}
+      {% if not rows %}
+        <tr><td colspan="8" class="text-center text-muted">Ничего не найдено</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -53,7 +53,7 @@ def list_tooling():
     tools = Tooling.query.filter_by(is_active=True).order_by(desc(Tooling.updated_at)).all()
     rows = []
     for t in tools:
-        a = t.last_aggregate()  # твой helper в модели возвращает словарь
+        a = t.last_aggregate()
         a["id"] = t.id
         rows.append(a)
     return render_template("tooling/list_tooling.html", rows=rows)
@@ -80,6 +80,36 @@ def tooling_detail(tool_id: int):
                            prev_id=prev_id, next_id=next_id)
 
 
+# ---------- Отчёт: что сейчас установлено ----------
+@tooling_bp.route("/report/installed")
+@login_required
+def report_installed():
+    """
+    Информационный отчёт по текущим установленным инструментам.
+    Фильтрация по STATUS делается через агрегатор last_aggregate(),
+    т.к. в модели Tooling нет колонки 'status'.
+    """
+    tools = (Tooling.query
+             .filter_by(is_active=True)
+             .order_by(Tooling.tool_code.asc())
+             .all())
+
+    rows = []
+    for t in tools:
+        agg = t.last_aggregate() or {}
+        if agg.get("STATUS") == "INSTALLED":
+            rows.append({
+                "id": t.id,
+                "batch": t.tool_code,
+                "bm": agg.get("BM#"),
+                "role": agg.get("ROLE"),
+                "pos": agg.get("POSITION"),
+                "dim": agg.get("DIM"),
+            })
+
+    return render_template("tooling/report_installed.html", rows=rows)
+
+
 # ---------- Новый BATCH ----------
 @tooling_bp.route("/new", methods=["GET", "POST"])
 @role_required(["admin", "root"])
@@ -97,8 +127,7 @@ def tooling_new():
         ttype = ToolType.query.filter_by(code=type_code).first()
         if not ttype:
             ttype = ToolType(code=type_code, name=type_code)
-            db.session.add(ttype)
-            db.session.flush()
+            db.session.add(ttype); db.session.flush()
 
         if Tooling.query.filter_by(tool_code=code).first():
             flash("Инструмент с таким BATCH # уже существует.", "warning")
@@ -110,8 +139,7 @@ def tooling_new():
             intended_role=role,
             current_diameter=float(dim) if dim is not None else None,
         )
-        db.session.add(tool)
-        db.session.flush()
+        db.session.add(tool); db.session.flush()
 
         ev = ToolingEvent(
             user_name=getattr(current_user, "username", "system"),
@@ -123,8 +151,7 @@ def tooling_new():
             role=role,
             dimension=dim
         )
-        db.session.add(ev)
-        db.session.commit()
+        db.session.add(ev); db.session.commit()
 
         flash("BATCH # создан.", "success")
         return redirect(url_for("tooling.list_tooling"))
@@ -161,7 +188,7 @@ def tooling_event():
 
         equipment = Equipment.query.get(int(machine_id)) if machine_id else None
 
-        # --- INSTALL: строгая валидация ---
+        # --- INSTALL ---
         if action == "INSTALL":
             if not role:
                 flash("Для INSTALL необходимо указать ROLE.", "warning")
@@ -182,10 +209,8 @@ def tooling_event():
                 flash("Для INSTALL необходимо выбрать REASON из списка.", "warning")
                 return redirect(url_for("tooling.tooling_event"))
 
-            install_tool(
-                tool=tool, equipment=equipment, role=role, position=position,
-                shift=shift, reason=reason, dim=float(dim),
-            )
+            install_tool(tool=tool, equipment=equipment, role=role, position=position,
+                         shift=shift, reason=reason, dim=float(dim))
             db.session.commit()
             flash("Установлено. Если слот был занят — предыдущий инструмент снят автоматически.", "success")
             return redirect(url_for("tooling.list_tooling"))
@@ -202,13 +227,10 @@ def tooling_event():
 
         # --- REGRIND ---
         if action == "REGRIND":
-            regrind_tool(
-                tool,
-                float(dim) if dim is not None else None,
-                float(new_dim) if new_dim is not None else None,
-                reason or "REGRIND",
-                shift,
-            )
+            regrind_tool(tool,
+                         float(dim) if dim is not None else None,
+                         float(new_dim) if new_dim is not None else None,
+                         reason or "REGRIND", shift)
             db.session.commit()
             flash("Перешлифовка зафиксирована.", "success")
             return redirect(url_for("tooling.list_tooling"))
@@ -218,18 +240,9 @@ def tooling_event():
             user_name=getattr(current_user, "username", "user"),
             machine_id=equipment.id if equipment else None,
             machine_name=(getattr(equipment, "name", None) or getattr(equipment, "code", None)) if equipment else None,
-            shift=shift,
-            happened_at=datetime.utcnow(),
-            action=action,
-            reason=reason,
-            note=note,
-            role=role,
-            position=position,
-            slot_id=None,
-            dimension=dim,
-            new_dimension=new_dim,
-            tool_id=tool.id,
-            batch_no=tool.tool_code,
+            shift=shift, happened_at=datetime.utcnow(), action=action,
+            reason=reason, note=note, role=role, position=position, slot_id=None,
+            dimension=dim, new_dimension=new_dim, tool_id=tool.id, batch_no=tool.tool_code,
             from_status=None,
             to_status=("READY" if action == "MARK_READY"
                        else "DEFECTIVE" if action == "MARK_DEFECTIVE"
@@ -239,22 +252,18 @@ def tooling_event():
         if action == "SCRAP":
             tool.is_active = False
 
-        db.session.add(ev)
-        db.session.commit()
+        db.session.add(ev); db.session.commit()
         flash(f"Событие {action} записано.", "success")
         return redirect(url_for("tooling.list_tooling"))
 
-    # GET → рендер формы
-    return render_template(
-        "tooling/event_form.html",
-        actions=ALLOWED_ACTIONS,
-        roles=ALLOWED_ROLES,
-        positions=ALLOWED_POSITIONS,
-        shifts=SHIFT_CHOICES,
-        machines=machines,
-        reasons=INSTALL_REASONS,
-    )
-
+    # GET
+    return render_template("tooling/event_form.html",
+                           actions=ALLOWED_ACTIONS,
+                           roles=ALLOWED_ROLES,
+                           positions=ALLOWED_POSITIONS,
+                           shifts=SHIFT_CHOICES,
+                           machines=machines,
+                           reasons=INSTALL_REASONS)
 
 # ---------- API: инфо по BATCH для автоподстановки DIM/ROLE ----------
 @tooling_bp.route("/api/tool/<string:batch_no>")
@@ -271,8 +280,7 @@ def api_tool_info(batch_no: str):
 @role_required(["admin", "root"])
 def export_csv():
     tools = Tooling.query.filter_by(is_active=True).order_by(desc(Tooling.updated_at)).all()
-    out = io.StringIO()
-    w = csv.writer(out, lineterminator="\n")
+    out = io.StringIO(); w = csv.writer(out, lineterminator="\n")
     header = ["BATCH #", "LAST DATE", "LAST ACTION", "STATUS", "BM#", "ROLE", "POSITION", "DIM", "NEW DIM"]
     w.writerow(header)
     for t in tools:
@@ -305,8 +313,7 @@ def export_tool_events(tool_id: int):
               .order_by(ToolingEvent.happened_at.asc())
               .all())
 
-    out = io.StringIO()
-    w = csv.writer(out, lineterminator="\n")
+    out = io.StringIO(); w = csv.writer(out, lineterminator="\n")
     w.writerow([
         "BATCH #", "DATE", "ACTION", "FROM_STATUS", "TO_STATUS",
         "BM#", "ROLE", "POSITION", "SHIFT", "REASON",
@@ -337,8 +344,55 @@ def export_tool_events(tool_id: int):
         f"attachment; filename=tool_{tool.tool_code}_events_{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
     return resp
 
+@tooling_bp.route("/search")
+@login_required
+def tooling_search():
+    """
+    Быстрый поиск по BATCH #.
+    Если нашли ровно один инструмент — сразу открываем его карточку.
+    Иначе показываем таблицу результатов.
+    """
+    q = (request.args.get("q") or "").strip()
+    if not q:
+        flash("Введите BATCH # для поиска.", "warning")
+        return redirect(url_for("tooling.list_tooling"))
 
-# ---------- Заглушка импорта (пока) ----------
+    # Ищем среди активных, но можно убрать filter_by(is_active=True), если нужно искать вообще все
+    query = (Tooling.query
+             .filter_by(is_active=True)
+             .filter(Tooling.tool_code.ilike(f"%{q}%"))
+             .order_by(Tooling.tool_code.asc()))
+
+    items = query.all()
+
+    # Если точное совпадение (без учета регистра) всего одно — сразу в карточку
+    exact = [t for t in items if t.tool_code.lower() == q.lower()]
+    if len(exact) == 1:
+        return redirect(url_for("tooling.tooling_detail", tool_id=exact[0].id))
+
+    if len(items) == 1:
+        return redirect(url_for("tooling.tooling_detail", tool_id=items[0].id))
+
+    # Иначе — собираем агрегированные строки
+    rows = []
+    for t in items:
+        a = t.last_aggregate() or {}
+        rows.append({
+            "id": t.id,
+            "batch": t.tool_code,
+            "status": a.get("STATUS"),
+            "bm": a.get("BM#"),
+            "role": a.get("ROLE"),
+            "pos": a.get("POSITION"),
+            "dim": a.get("DIM"),
+            "last_date": a.get("LAST DATE"),
+            "last_action": a.get("LAST ACTION"),
+        })
+
+    return render_template("tooling/search_results.html", q=q, rows=rows)
+
+
+# ---------- Заглушка импорта ----------
 @tooling_bp.route("/import", methods=["GET", "POST"])
 @role_required(["admin", "root"])
 def import_tooling():
