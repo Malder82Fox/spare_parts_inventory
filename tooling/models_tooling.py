@@ -36,9 +36,10 @@ ALLOWED_ACTIONS = [
     "REGRIND", "MARK_READY", "MARK_DEFECTIVE",
     "SCRAP"
 ]
-ALLOWED_SHIFTS = ["TOOL ROOM", "A", "B", "C"]
-ALLOWED_ROLES  = ["IRONING", "REDRAW DIE"]    # добавляй свои
+ALLOWED_SHIFTS = ["TOOL ROOM", "A", "B", "C", "ENGI"]
+ALLOWED_ROLES  = ["IRONING", "REDRAW DIE", "REDRAW SLEEVE", "PUNCH", "NOSE", "DOME PLUG", "CLAMP RING"]    # добавляй свои
 ALLOWED_POSITIONS = ["#1", "#2", "#3"]        # можно руками ввести любую строку
+NEW_TRIAL_REASONS = {"NEW", "TRIAL"}          # ^ используем, чтобы отличать (новую/тестовую) установку
 
 # ---------- МОДЕЛИ ----------
 
@@ -220,9 +221,14 @@ def uninstall_current_from_slot(slot: EquipmentSlot, reason: str = "Auto-uninsta
     db.session.flush()
     return ev
 
+
 def install_tool(tool: Tooling, equipment, role: str, position: str, shift: str, reason: str, dim: Optional[float]):
     """
     Установка с авто-снятием предыдущего инструмента из этого же слота.
+    ВАЖНО:
+    - Если REASON не NEW/TRIAL — она сохраняется в событии REMOVE у ПРЕЖНЕГО инструмента (автоснятие).
+    - Если REASON = NEW/TRIAL — причина остаётся у INSTALL НОВОГО инструмента.
+    - При передаче DIM — обновляем tool.current_diameter.
     """
     slot = ensure_slot(equipment, role, position)
 
@@ -232,13 +238,16 @@ def install_tool(tool: Tooling, equipment, role: str, position: str, shift: str,
             raise ValueError("Нельзя устанавливать инструмент ниже min_diameter")
 
     # 1) авто-снять того, кто уже стоит
-    uninstall_current_from_slot(slot)
+    #    Причина уходит в снятый инструмент, КРОМЕ NEW/TRIAL.
+    remove_reason = None if (reason or "").upper() in NEW_TRIAL_REASONS else reason
+    uninstall_current_from_slot(slot, reason=remove_reason)
 
     # 2) создать mount для нового
     mount = ToolingMount(tool_id=tool.id, slot_id=slot.id, created_by_id=getattr(current_user, "id", 1))
     db.session.add(mount)
 
-    # 3) событие INSTALL
+    # 3) событие INSTALL (причина только для NEW/TRIAL)
+    install_reason = reason if (reason or "").upper() in NEW_TRIAL_REASONS else None
     ev = ToolingEvent(
         user_name=(getattr(current_user, "username", None) or "system"),
         machine_id=equipment.id,
@@ -246,7 +255,7 @@ def install_tool(tool: Tooling, equipment, role: str, position: str, shift: str,
         shift=shift,
         happened_at=datetime.utcnow(),
         action="INSTALL",
-        reason=reason,
+        reason=install_reason,
         role=role,
         position=position,
         slot_id=slot.id,
@@ -258,6 +267,14 @@ def install_tool(tool: Tooling, equipment, role: str, position: str, shift: str,
         to_status="INSTALLED",
     )
     db.session.add(ev)
+
+    # 4) Обновим текущий диаметр, если указан
+    if dim is not None:
+        try:
+            tool.current_diameter = dim
+        except Exception:
+            pass
+
     return ev
 
 def remove_tool(tool: Tooling, equipment, role: str, position: str, reason: str):
@@ -289,9 +306,13 @@ def remove_tool(tool: Tooling, equipment, role: str, position: str, reason: str)
     db.session.add(ev)
     return ev
 
+
 def regrind_tool(tool: Tooling, dimension: Optional[float], new_dimension: Optional[float], reason: str, shift: Optional[str]):
     """
-    Перешлифовка: увеличиваем счётчик, обновляем current_diameter если пришёл new_dimension.
+    Перешлифовка:
+    - увеличиваем счётчик,
+    - обновляем current_diameter (если пришёл new_dimension, иначе оставляем как есть),
+    - переводим инструмент в статус STOCK.
     """
     tool.regrind_count = (tool.regrind_count or 0) + 1
     if new_dimension is not None:
@@ -313,7 +334,7 @@ def regrind_tool(tool: Tooling, dimension: Optional[float], new_dimension: Optio
         tool_id=tool.id,
         batch_no=tool.tool_code,
         from_status="NEED_SERVICE",
-        to_status="IN_SERVICE",
+        to_status="STOCK",
     )
     db.session.add(ev)
     return ev
