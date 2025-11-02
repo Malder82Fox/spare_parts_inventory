@@ -1,0 +1,40 @@
+name: CI / test (pull_request)
+
+on:
+  pull_request:
+    branches: [ develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Create venv & install deps
+        run: |
+          uv venv .venv
+          source .venv/bin/activate
+          if [ -f requirements.lock ]; then
+            uv pip sync requirements.lock
+          elif [ -f requirements.txt ]; then
+            uv pip install -r requirements.txt
+          fi
+          uv pip install pytest ruff
+
+      - name: Ruff lint
+        run: |
+          source .venv/bin/activate
+          ruff check .
+
+      - name: Pytest
+        env: { FLASK_ENV: testing }
+        run: |
+          source .venv/bin/activate
+          pytest -q
