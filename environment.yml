@@ -1,18 +1,9 @@
 name: spare_parts_inventory
 channels:
+  - conda-forge
   - defaults
 dependencies:
   - python=3.10
   - pip
-  - flask
-  - jinja2
-  - werkzeug
-  - openpyxl
-  - python-dotenv
-  - setuptools
-  - wheel
   - pip:
-      - flask_sqlalchemy
-      - flask_login
-
-
+      - .[dev]   # установит проект из текущей папки + dev-инструменты
