@@ -1,8 +1,8 @@
 # maintenance_models.py
-# Модели модуля обслуживания. Используем ЕДИНЫЙ db из extensions.py.
-# Таблицы пользователей/запчастей подхватываем динамически по __tablename__.
+"""SQLAlchemy models for the maintenance domain."""
 
 from datetime import datetime, timedelta
+
 from sqlalchemy import Table, Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -10,9 +10,13 @@ from extensions import db  # ЕДИНЫЙ экземпляр SQLAlchemy
 
 # Пытаемся импортировать ваши модели, чтобы узнать реальные имена таблиц
 try:
-    from models import Part, User  # если User отсутствует – не страшно
-except Exception:
+    from modules.spare_parts.models import Part  # если Part отсутствует – не страшно
+except Exception:  # pragma: no cover - defensive import
     Part = None
+
+try:
+    from models import User  # если User отсутствует – не страшно
+except Exception:  # pragma: no cover - defensive import
     User = None
 
 PART_TBL = getattr(Part, "__tablename__", "part")     # 'part' или 'parts'
