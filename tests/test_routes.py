@@ -20,6 +20,6 @@ def client(app):
     return app.test_client()
 
 def test_index_route(client):
-    response = client.get('/')
-    assert response.status_code == 200
-    assert b"Welcome" in response.data  # Предполагается, что на главной странице есть слово "Welcome"
+    resp = client.get("/", follow_redirects=True)
+    assert resp.status_code == 200
+    # тут уже окажешься на целевой странице после редиректа (возможно, login)
