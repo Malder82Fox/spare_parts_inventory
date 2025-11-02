@@ -34,3 +34,12 @@ dev = [
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+# keep the default rule set; do not enable unsafe fixes
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = []

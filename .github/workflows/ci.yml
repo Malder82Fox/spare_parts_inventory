@@ -1,0 +1,31 @@
+name: CI
+on:
+  pull_request:
+    branches: [ develop ]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install uv
+        run: pipx install uv
+      - name: Create venv and install runtime deps
+        run: |
+          uv venv .venv
+          source .venv/bin/activate
+          uv pip sync requirements.lock
+      - name: Install dev tools (pytest, ruff)
+        run: |
+          source .venv/bin/activate
+          uv pip install pytest ruff
+      - name: Lint (ruff)
+        run: |
+          source .venv/bin/activate
+          ruff check .
+      - name: Tests (pytest)
+        run: |
+          source .venv/bin/activate
+          pytest -q
