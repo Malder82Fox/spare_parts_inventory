@@ -1,0 +1,36 @@
+[project]
+name = "spare-parts-inventory"
+version = "0.1.0"
+description = "ERP modules for spare parts / maintenance / tooling (Flask baseline)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "Flask>=3.0",
+  "Flask-Login>=0.6",
+  "Flask-SQLAlchemy>=3.1",
+  "Jinja2>=3.1",
+  "Werkzeug>=3.0",
+  "click>=8.1",
+  "colorama>=0.4",
+  "python-dotenv>=1.0",
+  "openpyxl>=3.1",
+  "SQLAlchemy>=2.0",
+  "typing_extensions>=4.10",
+  "greenlet>=3.0",
+  "itsdangerous>=2.1",
+  "MarkupSafe>=2.1"
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff",
+  "black",
+  "mypy",
+  "pytest",
+  "pytest-asyncio",
+  "coverage"
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
