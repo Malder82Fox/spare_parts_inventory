@@ -1,0 +1,59 @@
+name: Pytest CI
+
+on:
+  push:
+    branches: [ develop, main ]
+  pull_request:
+    branches: [ develop, main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Run pytest (Python 3.11)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+      FLASK_ENV: testing
+      # Use a file-based SQLite DB for tests unless the app overrides it
+      DATABASE_URL: sqlite:///test.db
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            echo "requirements.txt not found, attempting editable install"
+            pip install -e .
+          fi
+
+      - name: Show environment
+        run: |
+          python --version
+          pip --version
+          pip list
+
+      - name: Run tests
+        run: |
+          pytest -q
