@@ -97,7 +97,8 @@ class Tooling(db.Model):
             "ROLE": ev.role if ev else self.intended_role,
             "POSITION": ev.position if ev else None,
             "DIM": ev.dimension if ev else None,
-            "NEW DIM": ev.new_dimension if ev else None
+            "NEW DIM": ev.new_dimension if ev else None,
+            "REASON": ev.reason if ev else None,
         }
 
 class EquipmentSlot(db.Model):
@@ -198,10 +199,17 @@ def uninstall_current_from_slot(slot: EquipmentSlot, reason: str = "Auto-uninsta
     tool = Tooling.query.get(mount.tool_id)
     mount.ended_at = datetime.utcnow()
     # событие для снятого
+    from modules.maintenance.models import Equipment  # локальный импорт, чтобы избежать циклов
+
+    equipment = Equipment.query.get(slot.equipment_id) if slot.equipment_id else None
+    machine_name = None
+    if equipment is not None:
+        machine_name = getattr(equipment, "name", None) or getattr(equipment, "code", None)
+
     ev = ToolingEvent(
         user_name=(getattr(current_user, "username", None) or "system"),
         machine_id=slot.equipment_id,
-        machine_name=None,
+        machine_name=machine_name,
         shift=None,
         happened_at=datetime.utcnow(),
         action="REMOVE",

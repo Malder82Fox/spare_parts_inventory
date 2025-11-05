@@ -5,6 +5,9 @@
 <h1 class="mb-3">Быстрое событие (как в Google Sheet)</h1>
 
 <form method="post" class="row g-3">
+  {% if back_target %}
+    <input type="hidden" name="back" value="{{ back_target }}">
+  {% endif %}
 
   <div class="col-12 col-md-3">
     <label class="form-label">USER</label>
@@ -73,7 +76,7 @@
 
   <div class="col-12 col-md-4">
     <label class="form-label">BATCH # *</label>
-    <input name="batch_no" id="batch_no" class="form-control" placeholder="например IH-112" required>
+    <input name="batch_no" id="batch_no" class="form-control" placeholder="например IH-112" value="{{ initial_batch or '' }}" required>
   </div>
 
   <div class="col-12 col-md-4">
@@ -93,7 +96,7 @@
 
   <div class="col-12">
     <button class="btn btn-primary">Сохранить событие</button>
-    <a class="btn btn-outline-secondary" href="{{ url_for('tooling.list_tooling') }}">Отмена</a>
+    <a class="btn btn-outline-secondary" href="{{ back_url }}">Отмена</a>
   </div>
 </form>
 

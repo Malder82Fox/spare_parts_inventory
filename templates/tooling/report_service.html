@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Tooling — Нужен сервис{% endblock %}
+
+{% block content %}
+<h1 class="mb-3">Tooling — нуждается в сервисе</h1>
+
+<div class="d-flex gap-2 mb-3 flex-wrap align-items-center">
+  <a class="btn btn-outline-secondary" href="{{ url_for('tooling.list_tooling') }}">← К списку</a>
+  <a class="btn btn-outline-info" href="{{ url_for('tooling.report_installed') }}">📊 Отчёт: установлено</a>
+</div>
+
+{% if rows|length == 0 %}
+  <div class="alert alert-success">Все инструменты обслужены. Статус NEED_SERVICE не найден.</div>
+{% else %}
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>BATCH #</th>
+          <th>LAST DATE</th>
+          <th>LAST ACTION</th>
+          <th>BM#</th>
+          <th>ROLE</th>
+          <th>POSITION</th>
+          <th>REASON</th>
+          <th>DIM</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr>
+            <td>
+              <a href="{{ url_for('tooling.tooling_detail', tool_id=r['id'], back='service_report') }}">{{ r['batch'] }}</a>
+            </td>
+            <td class="text-nowrap">{{ r['last_date'].strftime('%Y-%m-%d %H:%M:%S') if r['last_date'] else '' }}</td>
+            <td>{{ r['last_action'] or '' }}</td>
+            <td>{{ r['bm'] or '' }}</td>
+            <td>{{ r['role'] or '' }}</td>
+            <td>{{ r['pos'] or '' }}</td>
+            <td>{{ r['reason'] or '' }}</td>
+            <td>{{ r['dim'] if r['dim'] is not none else '' }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+{% endblock %}

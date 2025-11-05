@@ -10,6 +10,7 @@
   <a class="btn btn-outline-success" href="{{ url_for('tooling.export_csv') }}">⬇ Export CSV</a>
   <a class="btn btn-outline-success" href="{{ url_for('tooling.import_tooling') }}">⬆ Import CSV</a>
   <a class="btn btn-outline-info" href="{{ url_for('tooling.report_installed') }}">📊 REPORT: on BM#</a>
+  <a class="btn btn-outline-warning" href="{{ url_for('tooling.report_service') }}">🧰 Отчёт: нужен сервис</a>
 
   <!-- Быстрый поиск по BATCH # внутри модуля Tooling -->
   <form class="ms-auto input-group" action="{{ url_for('tooling.tooling_search') }}" method="get" style="max-width:420px">

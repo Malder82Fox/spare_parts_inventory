@@ -35,6 +35,15 @@ from permissions import role_required
 
 from . import bp
 
+SERVICE_ACTIONS = {"WASH", "POLISH", "INSPECT", "REPAIR"}
+SERVICE_BACK_TOKEN = "service_report"
+
+
+def _resolve_back_url(back_target: str | None) -> str:
+    if back_target == SERVICE_BACK_TOKEN:
+        return url_for("tooling.report_service")
+    return url_for("tooling.list_tooling")
+
 # ---------- Справочники для UI ----------
 SHIFT_CHOICES = ["Tooling room", "A", "B", "C", "D"]
 
@@ -80,6 +89,9 @@ def tooling_detail(tool_id: int):
               .order_by(ToolingEvent.happened_at.desc())
               .all())
 
+    back_target = request.args.get("back")
+    back_url = _resolve_back_url(back_target)
+
     ordered = Tooling.query.filter_by(is_active=True).order_by(desc(Tooling.updated_at)).all()
     ids = [t.id for t in ordered]
     idx = ids.index(tool_id) if tool_id in ids else -1
@@ -88,7 +100,8 @@ def tooling_detail(tool_id: int):
 
     return render_template("tooling/tooling_detail.html",
                            item=item, events=events,
-                           prev_id=prev_id, next_id=next_id)
+                           prev_id=prev_id, next_id=next_id,
+                           back_target=back_target, back_url=back_url)
 
 
 # ---------- Отчёт: что сейчас установлено ----------
@@ -119,6 +132,39 @@ def report_installed():
             })
 
     return render_template("tooling/report_installed.html", rows=rows)
+
+
+@bp.route("/report/service")
+@login_required
+def report_service():
+    """Report with tooling that requires service."""
+    tools = (
+        Tooling.query
+        .filter_by(is_active=True)
+        .order_by(Tooling.tool_code.asc())
+        .all()
+    )
+
+    rows = []
+    for tool in tools:
+        agg = tool.last_aggregate() or {}
+        if agg.get("STATUS") != "NEED_SERVICE":
+            continue
+        rows.append(
+            {
+                "id": tool.id,
+                "batch": tool.tool_code,
+                "last_date": agg.get("LAST DATE"),
+                "last_action": agg.get("LAST ACTION"),
+                "bm": agg.get("BM#"),
+                "role": agg.get("ROLE"),
+                "pos": agg.get("POSITION"),
+                "reason": agg.get("REASON"),
+                "dim": agg.get("DIM"),
+            }
+        )
+
+    return render_template("tooling/report_service.html", rows=rows)
 
 
 # ---------- Новый BATCH ----------
@@ -178,6 +224,9 @@ def tooling_new():
 @login_required
 def tooling_event():
     machines = Equipment.query.order_by(Equipment.name.asc()).all()
+    back_target = request.values.get("back")
+    back_url = _resolve_back_url(back_target)
+    initial_batch = request.args.get("batch")
 
     if request.method == "POST":
         batch = (request.form.get("batch_no") or "").strip()
@@ -193,7 +242,7 @@ def tooling_event():
 
         if not batch or action not in ALLOWED_ACTIONS:
             flash("Укажи BATCH # и корректный ACTION.", "warning")
-            return redirect(url_for("tooling.tooling_event"))
+            return redirect(url_for("tooling.tooling_event", back=back_target))
 
         tool = Tooling.query.filter_by(tool_code=batch).first()
         if not tool:
@@ -201,43 +250,45 @@ def tooling_event():
             return redirect(url_for("tooling.tooling_new"))
 
         equipment = Equipment.query.get(int(machine_id)) if machine_id else None
+        last_event = tool.last_event
+        from_status = last_event.to_status if last_event else None
 
         # --- INSTALL ---
         if action == "INSTALL":
             if not role:
                 flash("Для INSTALL необходимо указать ROLE.", "warning")
-                return redirect(url_for("tooling.tooling_event"))
+                return redirect(url_for("tooling.tooling_event", back=back_target))
             if role == "IRONING" and not position:
                 flash("Для INSTALL с ROLE=IRONING необходимо указать POSITION.", "warning")
-                return redirect(url_for("tooling.tooling_event"))
+                return redirect(url_for("tooling.tooling_event", back=back_target))
             if not equipment:
                 flash("Для INSTALL необходимо выбрать MACHINE (BM#).", "warning")
-                return redirect(url_for("tooling.tooling_event"))
+                return redirect(url_for("tooling.tooling_event", back=back_target))
             if not shift or shift not in SHIFT_CHOICES:
                 flash("Для INSTALL необходимо выбрать SHIFT.", "warning")
-                return redirect(url_for("tooling.tooling_event"))
+                return redirect(url_for("tooling.tooling_event", back=back_target))
             if dim is None:
                 flash("Для INSTALL необходимо указать DIM.", "warning")
-                return redirect(url_for("tooling.tooling_event"))
+                return redirect(url_for("tooling.tooling_event", back=back_target))
             if not reason or reason not in INSTALL_REASONS:
                 flash("Для INSTALL необходимо выбрать REASON из списка.", "warning")
-                return redirect(url_for("tooling.tooling_event"))
+                return redirect(url_for("tooling.tooling_event", back=back_target))
 
             install_tool(tool=tool, equipment=equipment, role=role, position=position,
                          shift=shift, reason=reason, dim=float(dim))
             db.session.commit()
             flash("Установлено. Если слот был занят — предыдущий инструмент снят автоматически.", "success")
-            return redirect(url_for("tooling.list_tooling"))
+            return redirect(back_url)
 
         # --- REMOVE ---
         if action == "REMOVE":
             if not (equipment and role and position):
                 flash("Для REMOVE обязательны: MACHINE, ROLE и POSITION.", "warning")
-                return redirect(url_for("tooling.tooling_event"))
+                return redirect(url_for("tooling.tooling_event", back=back_target))
             remove_tool(tool, equipment, role, position, reason or "REMOVE")
             db.session.commit()
             flash("Снято.", "success")
-            return redirect(url_for("tooling.list_tooling"))
+            return redirect(back_url)
 
         # --- REGRIND ---
         if action == "REGRIND":
@@ -247,7 +298,33 @@ def tooling_event():
                          reason or "REGRIND", shift)
             db.session.commit()
             flash("Перешлифовка зафиксирована.", "success")
-            return redirect(url_for("tooling.list_tooling"))
+            return redirect(back_url)
+
+        # --- SERVICE ACTIONS (WASH/POLISH/INSPECT/REPAIR) ---
+        if action in SERVICE_ACTIONS:
+            ev = ToolingEvent(
+                user_name=getattr(current_user, "username", "user"),
+                machine_id=equipment.id if equipment else None,
+                machine_name=(getattr(equipment, "name", None) or getattr(equipment, "code", None)) if equipment else None,
+                shift=shift,
+                happened_at=datetime.utcnow(),
+                action=action,
+                reason=reason,
+                note=note,
+                role=role,
+                position=position,
+                slot_id=None,
+                dimension=dim,
+                new_dimension=None,
+                tool_id=tool.id,
+                batch_no=tool.tool_code,
+                from_status=from_status,
+                to_status="STOCK",
+            )
+            db.session.add(ev)
+            db.session.commit()
+            flash(f"Событие {action} записано. Статус обновлён на STOCK.", "success")
+            return redirect(back_url)
 
         # --- Прочие события ---
         ev = ToolingEvent(
@@ -257,7 +334,7 @@ def tooling_event():
             shift=shift, happened_at=datetime.utcnow(), action=action,
             reason=reason, note=note, role=role, position=position, slot_id=None,
             dimension=dim, new_dimension=new_dim, tool_id=tool.id, batch_no=tool.tool_code,
-            from_status=None,
+            from_status=from_status,
             to_status=("READY" if action == "MARK_READY"
                        else "DEFECTIVE" if action == "MARK_DEFECTIVE"
                        else "SCRAPPED" if action == "SCRAP"
@@ -269,7 +346,7 @@ def tooling_event():
         db.session.add(ev)
         db.session.commit()
         flash(f"Событие {action} записано.", "success")
-        return redirect(url_for("tooling.list_tooling"))
+        return redirect(back_url)
 
     # GET
     return render_template("tooling/event_form.html",
@@ -278,7 +355,10 @@ def tooling_event():
                            positions=ALLOWED_POSITIONS,
                            shifts=SHIFT_CHOICES,
                            machines=machines,
-                           reasons=INSTALL_REASONS)
+                           reasons=INSTALL_REASONS,
+                           back_target=back_target,
+                           back_url=back_url,
+                           initial_batch=initial_batch)
 
 # ---------- API: инфо по BATCH для автоподстановки DIM/ROLE ----------
 @bp.route("/api/tool/<string:batch_no>")

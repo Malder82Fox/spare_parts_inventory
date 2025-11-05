@@ -5,21 +5,21 @@
 <h1 class="mb-3">Tool {{ item.tool_code }} — история событий</h1>
 
 <div class="d-flex gap-2 mb-3">
-  <a class="btn btn-outline-secondary" href="{{ url_for('tooling.list_tooling') }}">← К списку</a>
+  <a class="btn btn-outline-secondary" href="{{ back_url }}">← Назад</a>
 
   {% if prev_id %}
-    <a class="btn btn-outline-primary" href="{{ url_for('tooling.tooling_detail', tool_id=prev_id) }}">⟵ Предыдущий</a>
+    <a class="btn btn-outline-primary" href="{{ url_for('tooling.tooling_detail', tool_id=prev_id, back=back_target) }}">⟵ Предыдущий</a>
   {% else %}
     <button class="btn btn-outline-primary" disabled>⟵ Предыдущий</button>
   {% endif %}
 
   {% if next_id %}
-    <a class="btn btn-outline-primary" href="{{ url_for('tooling.tooling_detail', tool_id=next_id) }}">Следующий ⟶</a>
+    <a class="btn btn-outline-primary" href="{{ url_for('tooling.tooling_detail', tool_id=next_id, back=back_target) }}">Следующий ⟶</a>
   {% else %}
     <button class="btn btn-outline-primary" disabled>Следующий ⟶</button>
   {% endif %}
 
-  <a class="btn btn-primary" href="{{ url_for('tooling.tooling_event') }}">➕ Новое событие</a>
+  <a class="btn btn-primary" href="{{ url_for('tooling.tooling_event', back=back_target, batch=item.tool_code) }}">➕ Новое событие</a>
   <a class="btn btn-success" href="{{ url_for('tooling.export_tool_events', tool_id=item.id) }}">⬇ Экспорт событий CSV</a>
 </div>
 
