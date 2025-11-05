@@ -1,9 +1,9 @@
-name: Pytest CI
+name: Pytest
 
 on:
-  push:
-    branches: [ develop, main ]
   pull_request:
+    branches: [ develop, main ]
+  push:
     branches: [ develop, main ]
   workflow_dispatch:
 
@@ -17,43 +17,36 @@ concurrency:
 
 jobs:
   tests:
-    name: Run pytest (Python 3.11)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     env:
-      PIP_DISABLE_PIP_VERSION_CHECK: "1"
-      PYTHONDONTWRITEBYTECODE: "1"
       FLASK_ENV: testing
-      # Use a file-based SQLite DB for tests unless the app overrides it
+      PYTHONDONTWRITEBYTECODE: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
       DATABASE_URL: sqlite:///test.db
+      PYTEST_ADDOPTS: "-q"
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
 
-      - name: Install dependencies
+      - name: Install uv & deps
         run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
+          python -m pip install --upgrade pip uv
+          uv venv .venv
+          source .venv/bin/activate
+          if [ -f requirements.lock ]; then
+            uv pip sync requirements.lock
+          elif [ -f requirements.txt ]; then
+            uv pip install -r requirements.txt
           else
-            echo "requirements.txt not found, attempting editable install"
-            pip install -e .
+            uv pip install -e .
           fi
+          uv pip install pytest
 
-      - name: Show environment
+      - name: Run pytest
         run: |
-          python --version
-          pip --version
-          pip list
-
-      - name: Run tests
-        run: |
-          pytest -q
+          source .venv/bin/activate
+          pytest
