@@ -1,9 +1,7 @@
-Flask
-Flask-Login
-Flask-SQLAlchemy
-SQLAlchemy
-Werkzeug
-greenlet
-openpyxl
-pytest
-python-dotenv
+Flask==3.1.2
+flask_login==0.6.3
+flask_sqlalchemy==3.1.1
+pytest==8.4.2
+python-dotenv==1.2.1
+SQLAlchemy==2.0.44
+Werkzeug==3.1.3
