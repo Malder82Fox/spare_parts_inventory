@@ -16,7 +16,7 @@ from app import create_app           # фабрика приложения (ка
 from extensions import db
 
 # Импорт моделей, чтобы SQLAlchemy «знал» о таблицах
-import tooling.models_tooling as TM   # noqa
+import modules.tooling.models as TM  # noqa
 
 
 def drop_tooling_tables():

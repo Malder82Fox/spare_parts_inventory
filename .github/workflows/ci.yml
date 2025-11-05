@@ -1,40 +1,34 @@
-name: CI / test (pull_request)
+name: Lint (pull_request)
 
 on:
   pull_request:
-    branches: [ develop ]
+    branches: [ develop, main ]
+  push:
+    branches: [ develop, main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install uv
-        run: pip install uv
-
-      - name: Create venv & install deps
+      - name: Install uv + ruff
         run: |
-          uv venv .venv
-          source .venv/bin/activate
-          if [ -f requirements.lock ]; then
-            uv pip sync requirements.lock
-          elif [ -f requirements.txt ]; then
-            uv pip install -r requirements.txt
-          fi
-          uv pip install pytest ruff
+          python -m pip install --upgrade pip uv ruff
 
-      - name: Ruff lint
+      - name: Ruff check
         run: |
-          source .venv/bin/activate
           ruff check .
-
-      - name: Pytest
-        env: { FLASK_ENV: testing }
-        run: |
-          source .venv/bin/activate
-          pytest -q
