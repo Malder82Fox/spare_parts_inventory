@@ -1,30 +1,57 @@
+"""HTTP routes for the spare parts domain."""
+
 from flask import current_app
-from flask import Blueprint
-from flask import render_template, redirect, url_for, request, flash, send_file, session
-from flask_login import login_user, logout_user, login_required, current_user
+from flask import render_template, redirect, url_for, request, flash, session
+from flask_login import (
+    UserMixin,
+    current_user,
+    login_required,
+    login_user,
+    logout_user,
+)
 from werkzeug.security import check_password_hash
-from models import User, Part
-from extensions import db, login_manager
-from utils import allowed_file, handle_file_upload
 from sqlalchemy import or_
-import io
 
+from extensions import db, login_manager
+from models import User
+from modules.spare_parts.models import Part
 from permissions import require_role
+from utils import allowed_file, handle_file_upload
 
-main = Blueprint('main', __name__)
+from . import bp
 
 @login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+def load_user(user_id: str | None) -> User | UserMixin | None:
+    """Resolve a ``User`` instance for Flask-Login sessions."""
 
-@main.route('/')
+    if not user_id:
+        return None
+
+    user = db.session.get(User, int(user_id))
+    if user is not None:
+        return user
+
+    if current_app.config.get("LOGIN_DISABLED"):
+        class _TestingUser(UserMixin):
+            """Fallback principal used when authentication is disabled."""
+
+            def __init__(self, test_user_id: int) -> None:
+                self.id = test_user_id
+                self.username = "test-user"
+                self.role = "root"
+
+        return _TestingUser(int(user_id))
+
+    return None
+
+@bp.route('/')
 @login_required
 def index():
     parts = Part.query.all()
     count = Part.query.count()
     return render_template('index.html', parts=parts, user=current_user, count=count)
 
-@main.route('/login', methods=['GET', 'POST'])
+@bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
@@ -36,13 +63,13 @@ def login():
         flash('Invalid username or password')
     return render_template('login.html')
 
-@main.route('/logout')
+@bp.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('main.login'))
 
-@main.route('/add', methods=['GET', 'POST'])
+@bp.route('/add', methods=['GET', 'POST'])
 @login_required
 @require_role('admin','root')
 def add_part():
@@ -83,7 +110,7 @@ def add_part():
 
     return render_template('add_part.html')
 
-@main.route('/edit/<int:part_id>', methods=['GET', 'POST'])
+@bp.route('/edit/<int:part_id>', methods=['GET', 'POST'])
 @login_required
 @require_role('admin','root')
 def edit_part(part_id):
@@ -110,7 +137,7 @@ def edit_part(part_id):
 
     return render_template('edit_part.html', part=part, user=current_user)
 
-@main.route('/part/<int:part_id>')
+@bp.route('/part/<int:part_id>')
 @login_required
 def view_part(part_id):
     part = Part.query.get_or_404(part_id)
@@ -136,7 +163,7 @@ def view_part(part_id):
         next_id=next_id
     )
 
-@main.route('/delete/<int:part_id>', methods=['POST'])
+@bp.route('/delete/<int:part_id>', methods=['POST'])
 @login_required
 @require_role('root')
 def delete_part(part_id):
@@ -146,21 +173,21 @@ def delete_part(part_id):
     flash('✅ Part deleted successfully.')
     return redirect(url_for('main.index'))
 
-@main.route('/export')
+@bp.route('/export')
 @login_required
 @require_role('admin','root')
 def export():
     flash("Export is not implemented yet.")
     return redirect(url_for('main.index'))
 
-@main.route('/import', methods=['GET', 'POST'])
+@bp.route('/import', methods=['GET', 'POST'])
 @login_required
 @require_role('admin','root')
 def import_parts():
     # свою реализацию импорта оставь/верни, доступ ограничен
     return render_template('import.html')
 
-@main.route('/search', methods=['GET'])
+@bp.route('/search', methods=['GET'])
 @login_required
 def search():
     keyword = request.args.get('query', '').strip()
@@ -188,7 +215,7 @@ def search():
     session['search_results'] = [p.id for p in results]
     return redirect(url_for('main.search_results', index=0))
 
-@main.route('/search/results/<int:index>')
+@bp.route('/search/results/<int:index>')
 @login_required
 def search_results(index):
     ids = session.get('search_results', [])
