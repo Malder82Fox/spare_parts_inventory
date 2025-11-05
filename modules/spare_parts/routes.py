@@ -2,7 +2,13 @@
 
 from flask import current_app
 from flask import render_template, redirect, url_for, request, flash, session
-from flask_login import login_user, logout_user, login_required, current_user
+from flask_login import (
+    UserMixin,
+    current_user,
+    login_required,
+    login_user,
+    logout_user,
+)
 from werkzeug.security import check_password_hash
 from sqlalchemy import or_
 
@@ -15,8 +21,28 @@ from utils import allowed_file, handle_file_upload
 from . import bp
 
 @login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+def load_user(user_id: str | None) -> User | UserMixin | None:
+    """Resolve a ``User`` instance for Flask-Login sessions."""
+
+    if not user_id:
+        return None
+
+    user = db.session.get(User, int(user_id))
+    if user is not None:
+        return user
+
+    if current_app.config.get("LOGIN_DISABLED"):
+        class _TestingUser(UserMixin):
+            """Fallback principal used when authentication is disabled."""
+
+            def __init__(self, test_user_id: int) -> None:
+                self.id = test_user_id
+                self.username = "test-user"
+                self.role = "root"
+
+        return _TestingUser(int(user_id))
+
+    return None
 
 @bp.route('/')
 @login_required
