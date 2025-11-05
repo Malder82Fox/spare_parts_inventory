@@ -4,16 +4,16 @@ from flask_login import login_required
 from extensions import db
 
 # Модели для KPI
-from models import Part
+from modules.spare_parts.models import Part
 try:
-    from maintenance_models import WorkOrder
-except Exception:
+    from modules.maintenance.models import WorkOrder
+except Exception:  # pragma: no cover - optional dependency
     WorkOrder = None
 
 # 🔹 Опционально импортируем модели оснастки (если модуль подключен)
 try:
-    from tooling.models_tooling import Tooling, ToolStatus
-except Exception:
+    from modules.tooling.models import Tooling, ToolStatus  # type: ignore[attr-defined]
+except Exception:  # pragma: no cover - optional dependency
     Tooling = None
     ToolStatus = None
 
@@ -36,10 +36,10 @@ def home():
     tooling_installed = 0
     if Tooling is not None:
         try:
-            tooling_count = db.session.query(Tooling).filter(Tooling.is_active == True).count()
+            tooling_count = db.session.query(Tooling).filter(Tooling.is_active.is_(True)).count()
             if ToolStatus is not None:
                 tooling_installed = db.session.query(Tooling).filter(
-                    Tooling.is_active == True,
+                    Tooling.is_active.is_(True),
                     Tooling.status == ToolStatus.INSTALLED
                 ).count()
         except Exception:
