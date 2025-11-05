@@ -2,22 +2,52 @@ name: CI / test (pull_request)
 
 on:
   pull_request:
-    branches: [ develop ]
+    branches: [ develop, main ]
+  push:
+    branches: [ develop, main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FLASK_ENV: testing
+      PYTHONDONTWRITEBYTECODE: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      # если в коде читается DATABASE_URL — используем файл SQLite
+      DATABASE_URL: sqlite:///test.db
+      # делаем pytest тише по умолчанию
+      PYTEST_ADDOPTS: "-q"
+
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
+      # Кэшируем виртуальное окружение по хешу requirements.*
+      - name: Cache venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('requirements.lock', 'requirements.txt', 'pyproject.toml') }}
+
       - name: Install uv
-        run: pip install uv
+        run: python -m pip install --upgrade pip uv
 
       - name: Create venv & install deps
+        shell: bash
         run: |
           uv venv .venv
           source .venv/bin/activate
@@ -25,16 +55,19 @@ jobs:
             uv pip sync requirements.lock
           elif [ -f requirements.txt ]; then
             uv pip install -r requirements.txt
+          else
+            uv pip install -e .
           fi
           uv pip install pytest ruff
 
       - name: Ruff lint
+        shell: bash
         run: |
           source .venv/bin/activate
           ruff check .
 
       - name: Pytest
-        env: { FLASK_ENV: testing }
+        shell: bash
         run: |
           source .venv/bin/activate
-          pytest -q
+          pytest
