@@ -1,7 +1,12 @@
 # seed_maintenance.py
 from datetime import date
 from extensions import db
-from maintenance_models import Equipment, ChecklistTemplate, ChecklistItem, MaintenancePlan
+from modules.maintenance.models import (
+    Equipment,
+    ChecklistTemplate,
+    ChecklistItem,
+    MaintenancePlan,
+)
 
 def run():
     eq = Equipment.query.filter_by(code="BM-01").first()
@@ -18,7 +23,8 @@ def run():
             name_ru="Бодимейкер — Ежедневный",
             default_frequency="daily"
         )
-        db.session.add(tmpl); db.session.flush()
+        db.session.add(tmpl)
+        db.session.flush()
 
         rows = [
             ("Main air pressure within range", "Давление основного воздуха в норме", "checkbox", ""),

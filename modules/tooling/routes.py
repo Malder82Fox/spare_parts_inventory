@@ -3,26 +3,37 @@
 
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-import io
 import csv
+import io
 
 from flask import (
-    Blueprint, render_template, request, redirect, url_for,
-    flash, make_response, jsonify
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    make_response,
+    jsonify,
 )
 from flask_login import login_required, current_user
 from sqlalchemy import desc
 
 from extensions import db
-from maintenance_models import Equipment
-from tooling.models_tooling import (
-    Tooling, ToolType, ToolingEvent,
-    ALLOWED_ACTIONS, ALLOWED_SHIFTS, ALLOWED_ROLES, ALLOWED_POSITIONS,
-    install_tool, remove_tool, regrind_tool,
+from modules.maintenance.models import Equipment
+from modules.tooling.models import (
+    Tooling,
+    ToolType,
+    ToolingEvent,
+    ALLOWED_ACTIONS,
+    ALLOWED_ROLES,
+    ALLOWED_POSITIONS,
+    install_tool,
+    remove_tool,
+    regrind_tool,
 )
 from permissions import role_required
 
-tooling_bp = Blueprint("tooling", __name__)
+from . import bp
 
 # ---------- Справочники для UI ----------
 SHIFT_CHOICES = ["Tooling room", "A", "B", "C", "D"]
@@ -47,7 +58,7 @@ def _parse_num(s: str | None):
 
 
 # ---------- Список агрегированный ----------
-@tooling_bp.route("/")
+@bp.route("/")
 @login_required
 def list_tooling():
     tools = Tooling.query.filter_by(is_active=True).order_by(desc(Tooling.updated_at)).all()
@@ -60,7 +71,7 @@ def list_tooling():
 
 
 # ---------- Карточка BATCH ----------
-@tooling_bp.route("/<int:tool_id>")
+@bp.route("/<int:tool_id>")
 @login_required
 def tooling_detail(tool_id: int):
     item = Tooling.query.get_or_404(tool_id)
@@ -81,7 +92,7 @@ def tooling_detail(tool_id: int):
 
 
 # ---------- Отчёт: что сейчас установлено ----------
-@tooling_bp.route("/report/installed")
+@bp.route("/report/installed")
 @login_required
 def report_installed():
     """
@@ -111,7 +122,7 @@ def report_installed():
 
 
 # ---------- Новый BATCH ----------
-@tooling_bp.route("/new", methods=["GET", "POST"])
+@bp.route("/new", methods=["GET", "POST"])
 @role_required(["admin", "root"])
 def tooling_new():
     if request.method == "POST":
@@ -127,7 +138,8 @@ def tooling_new():
         ttype = ToolType.query.filter_by(code=type_code).first()
         if not ttype:
             ttype = ToolType(code=type_code, name=type_code)
-            db.session.add(ttype); db.session.flush()
+            db.session.add(ttype)
+            db.session.flush()
 
         if Tooling.query.filter_by(tool_code=code).first():
             flash("Инструмент с таким BATCH # уже существует.", "warning")
@@ -139,7 +151,8 @@ def tooling_new():
             intended_role=role,
             current_diameter=float(dim) if dim is not None else None,
         )
-        db.session.add(tool); db.session.flush()
+        db.session.add(tool)
+        db.session.flush()
 
         ev = ToolingEvent(
             user_name=getattr(current_user, "username", "system"),
@@ -151,7 +164,8 @@ def tooling_new():
             role=role,
             dimension=dim
         )
-        db.session.add(ev); db.session.commit()
+        db.session.add(ev)
+        db.session.commit()
 
         flash("BATCH # создан.", "success")
         return redirect(url_for("tooling.list_tooling"))
@@ -160,7 +174,7 @@ def tooling_new():
 
 
 # ---------- Универсальная форма события ----------
-@tooling_bp.route("/event", methods=["GET", "POST"])
+@bp.route("/event", methods=["GET", "POST"])
 @login_required
 def tooling_event():
     machines = Equipment.query.order_by(Equipment.name.asc()).all()
@@ -252,7 +266,8 @@ def tooling_event():
         if action == "SCRAP":
             tool.is_active = False
 
-        db.session.add(ev); db.session.commit()
+        db.session.add(ev)
+        db.session.commit()
         flash(f"Событие {action} записано.", "success")
         return redirect(url_for("tooling.list_tooling"))
 
@@ -266,7 +281,7 @@ def tooling_event():
                            reasons=INSTALL_REASONS)
 
 # ---------- API: инфо по BATCH для автоподстановки DIM/ROLE ----------
-@tooling_bp.route("/api/tool/<string:batch_no>")
+@bp.route("/api/tool/<string:batch_no>")
 @login_required
 def api_tool_info(batch_no: str):
     tool = Tooling.query.filter_by(tool_code=batch_no.strip()).first()
@@ -276,16 +291,17 @@ def api_tool_info(batch_no: str):
 
 
 # ---------- Экспорт агрегированного списка ----------
-@tooling_bp.route("/export/csv")
+@bp.route("/export/csv")
 @role_required(["admin", "root"])
 def export_csv():
     tools = Tooling.query.filter_by(is_active=True).order_by(desc(Tooling.updated_at)).all()
-    out = io.StringIO(); w = csv.writer(out, lineterminator="\n")
+    out = io.StringIO()
+    writer = csv.writer(out, lineterminator="\n")
     header = ["BATCH #", "LAST DATE", "LAST ACTION", "STATUS", "BM#", "ROLE", "POSITION", "DIM", "NEW DIM"]
-    w.writerow(header)
+    writer.writerow(header)
     for t in tools:
         a = t.last_aggregate()
-        w.writerow([
+        writer.writerow([
             a["BATCH #"] or "",
             a["LAST DATE"].isoformat(sep=" ") if a["LAST DATE"] else "",
             a["LAST ACTION"] or "",
@@ -304,7 +320,7 @@ def export_csv():
 
 
 # ---------- Экспорт истории событий конкретного BATCH ----------
-@tooling_bp.route("/<int:tool_id>/export/events.csv")
+@bp.route("/<int:tool_id>/export/events.csv")
 @login_required
 def export_tool_events(tool_id: int):
     tool = Tooling.query.get_or_404(tool_id)
@@ -313,14 +329,15 @@ def export_tool_events(tool_id: int):
               .order_by(ToolingEvent.happened_at.asc())
               .all())
 
-    out = io.StringIO(); w = csv.writer(out, lineterminator="\n")
-    w.writerow([
+    out = io.StringIO()
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow([
         "BATCH #", "DATE", "ACTION", "FROM_STATUS", "TO_STATUS",
         "BM#", "ROLE", "POSITION", "SHIFT", "REASON",
         "DIM", "NEW_DIM", "USER", "NOTE"
     ])
     for e in events:
-        w.writerow([
+        writer.writerow([
             tool.tool_code,
             e.happened_at.isoformat(sep=" ") if e.happened_at else "",
             e.action or "",
@@ -344,7 +361,7 @@ def export_tool_events(tool_id: int):
         f"attachment; filename=tool_{tool.tool_code}_events_{datetime.utcnow():%Y%m%d_%H%M%S}.csv"
     return resp
 
-@tooling_bp.route("/search")
+@bp.route("/search")
 @login_required
 def tooling_search():
     """
@@ -393,7 +410,7 @@ def tooling_search():
 
 
 # ---------- Заглушка импорта ----------
-@tooling_bp.route("/import", methods=["GET", "POST"])
+@bp.route("/import", methods=["GET", "POST"])
 @role_required(["admin", "root"])
 def import_tooling():
     if request.method == "POST":

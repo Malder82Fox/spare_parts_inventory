@@ -26,7 +26,7 @@ from datetime import datetime
 from typing import Optional
 
 from flask_login import current_user
-from sqlalchemy import func, UniqueConstraint, text
+from sqlalchemy import UniqueConstraint
 from extensions import db
 
 # ---------- Наборы значений (можно загрузить из БД, но пока — константы) ----------

@@ -1,19 +1,25 @@
-# maintenance_routes.py
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_required, current_user
+"""HTTP routes for the maintenance domain."""
+
 from datetime import date, datetime
 
+from flask import render_template, request, redirect, url_for, flash
+from flask_login import login_required, current_user
+
 from extensions import db
-from maintenance_models import (
-    Equipment, ChecklistTemplate, ChecklistItem,
-    MaintenancePlan, WorkOrder, WorkOrderItem
-)
 from permissions import require_role
 
-maintenance_bp = Blueprint("maintenance", __name__)
+from . import bp
+from .models import (
+    Equipment,
+    ChecklistTemplate,
+    ChecklistItem,
+    MaintenancePlan,
+    WorkOrder,
+    WorkOrderItem,
+)
 
 # =================== EQUIPMENT ===================
-@maintenance_bp.route("/equipment")
+@bp.route("/equipment")
 @login_required
 def equipment_list():
     q = request.args.get("q", "").strip()
@@ -28,7 +34,7 @@ def equipment_list():
     items = query.order_by(Equipment.code.asc()).all()
     return render_template("maintenance/equipment_list.html", items=items, q=q)
 
-@maintenance_bp.route("/equipment/add", methods=["GET", "POST"])
+@bp.route("/equipment/add", methods=["GET", "POST"])
 @login_required
 @require_role("root")
 def equipment_add():
@@ -50,13 +56,13 @@ def equipment_add():
         return redirect(url_for("maintenance.equipment_list"))
     return render_template("maintenance/equipment_form.html", item=None)
 
-@maintenance_bp.route("/equipment/<int:eid>")
+@bp.route("/equipment/<int:eid>")
 @login_required
 def equipment_view(eid: int):
     eq = Equipment.query.get_or_404(eid)
     return render_template("maintenance/equipment_view.html", item=eq)
 
-@maintenance_bp.route("/equipment/<int:eid>/edit", methods=["GET", "POST"])
+@bp.route("/equipment/<int:eid>/edit", methods=["GET", "POST"])
 @login_required
 @require_role("root")
 def equipment_edit(eid: int):
@@ -70,7 +76,7 @@ def equipment_edit(eid: int):
         return redirect(url_for("maintenance.equipment_view", eid=eq.id))
     return render_template("maintenance/equipment_form.html", item=eq)
 
-@maintenance_bp.route("/equipment/<int:eid>/delete", methods=["POST"])
+@bp.route("/equipment/<int:eid>/delete", methods=["POST"])
 @login_required
 @require_role("root")
 def equipment_delete(eid: int):
@@ -81,13 +87,13 @@ def equipment_delete(eid: int):
     return redirect(url_for("maintenance.equipment_list"))
 
 # =================== CHECKLIST TEMPLATES ===================
-@maintenance_bp.route("/checklists/templates")
+@bp.route("/checklists/templates")
 @login_required
 def checklist_templates_list():
     items = ChecklistTemplate.query.order_by(ChecklistTemplate.code.asc()).all()
     return render_template("maintenance/checklist_templates_list.html", items=items)
 
-@maintenance_bp.route("/checklists/templates/add", methods=["GET", "POST"])
+@bp.route("/checklists/templates/add", methods=["GET", "POST"])
 @login_required
 @require_role("root", "admin")
 def checklist_template_add():
@@ -130,7 +136,7 @@ def checklist_template_add():
 
     return render_template("maintenance/checklist_template_form.html", item=None)
 
-@maintenance_bp.route("/checklists/templates/<int:tid>/edit", methods=["GET", "POST"])
+@bp.route("/checklists/templates/<int:tid>/edit", methods=["GET", "POST"])
 @login_required
 @require_role("root", "admin")
 def checklist_template_edit(tid: int):
@@ -176,7 +182,7 @@ def checklist_template_edit(tid: int):
     return render_template("maintenance/checklist_template_form.html",
                            item=tmpl, items_raw="\n".join(raw))
 
-@maintenance_bp.route("/checklists/templates/<int:tid>/delete", methods=["POST"])
+@bp.route("/checklists/templates/<int:tid>/delete", methods=["POST"])
 @login_required
 @require_role("root")
 def checklist_template_delete(tid: int):
@@ -188,13 +194,13 @@ def checklist_template_delete(tid: int):
     return redirect(url_for("maintenance.checklist_templates_list"))
 
 # =================== MAINTENANCE PLANS ===================
-@maintenance_bp.route("/plans")
+@bp.route("/plans")
 @login_required
 def maintenance_plans_list():
     items = MaintenancePlan.query.order_by(MaintenancePlan.id.desc()).all()
     return render_template("maintenance/maintenance_plans_list.html", items=items)
 
-@maintenance_bp.route("/plans/add", methods=["GET", "POST"])
+@bp.route("/plans/add", methods=["GET", "POST"])
 @login_required
 @require_role("root")
 def maintenance_plan_add():
@@ -216,7 +222,7 @@ def maintenance_plan_add():
     tpls = ChecklistTemplate.query.order_by(ChecklistTemplate.code.asc()).all()
     return render_template("maintenance/maintenance_plan_form.html", eqs=eqs, tpls=tpls)
 
-@maintenance_bp.route("/plans/<int:pid>/edit", methods=["GET", "POST"])
+@bp.route("/plans/<int:pid>/edit", methods=["GET", "POST"])
 @login_required
 @require_role("root")
 def maintenance_plan_edit(pid: int):
@@ -236,7 +242,7 @@ def maintenance_plan_edit(pid: int):
     tpls = ChecklistTemplate.query.order_by(ChecklistTemplate.code.asc()).all()
     return render_template("maintenance/maintenance_plan_form.html", item=mp, eqs=eqs, tpls=tpls)
 
-@maintenance_bp.route("/plans/<int:pid>/delete", methods=["POST"])
+@bp.route("/plans/<int:pid>/delete", methods=["POST"])
 @login_required
 @require_role("root")
 def maintenance_plan_delete(pid: int):
@@ -246,7 +252,7 @@ def maintenance_plan_delete(pid: int):
     flash("Maintenance Plan deleted", "success")
     return redirect(url_for("maintenance.maintenance_plans_list"))
 
-@maintenance_bp.route("/plans/run", methods=["POST"])
+@bp.route("/plans/run", methods=["POST"])
 @login_required
 @require_role("root")
 def maintenance_schedule_run():
@@ -281,7 +287,7 @@ def maintenance_schedule_run():
     return redirect(url_for("maintenance.workorders_list"))
 
 # =================== WORK ORDERS ===================
-@maintenance_bp.route("/workorders")
+@bp.route("/workorders")
 @login_required
 def workorders_list():
     status = request.args.get("status")
@@ -291,13 +297,13 @@ def workorders_list():
     items = query.all()
     return render_template("maintenance/workorders_list.html", items=items, status=status)
 
-@maintenance_bp.route("/workorders/<int:wid>")
+@bp.route("/workorders/<int:wid>")
 @login_required
 def workorder_view(wid: int):
     wo = WorkOrder.query.get_or_404(wid)
     return render_template("maintenance/workorder_view.html", wo=wo)
 
-@maintenance_bp.route("/workorders/<int:wid>/fill", methods=["GET", "POST"])
+@bp.route("/workorders/<int:wid>/fill", methods=["GET", "POST"])
 @login_required
 @require_role("root", "admin", "user")
 def workorder_fill(wid: int):
@@ -328,19 +334,20 @@ def workorder_fill(wid: int):
 
     return render_template("maintenance/workorder_fill.html", wo=wo)
 
-@maintenance_bp.route("/workorders/<int:wid>/reopen", methods=["POST"])
+@bp.route("/workorders/<int:wid>/reopen", methods=["POST"])
 @login_required
 @require_role("root")
 def workorder_reopen(wid:int):
     wo = WorkOrder.query.get_or_404(wid)
     if wo.status == "done":
         wo.status = "open"
-        if hasattr(wo, "closed_at"): wo.closed_at = None
+        if hasattr(wo, "closed_at"):
+            wo.closed_at = None
         db.session.commit()
         flash("Work order reopened", "success")
     return redirect(url_for("maintenance.workorders_list"))
 
-@maintenance_bp.route("/workorders/new", methods=["POST"])
+@bp.route("/workorders/new", methods=["POST"])
 @login_required
 @require_role("root")
 def workorder_new():
@@ -363,7 +370,7 @@ def workorder_new():
     return redirect(url_for("maintenance.workorders_list"))
 
 # УДАЛЕНИЕ WORK ORDER (только root)
-@maintenance_bp.route("/workorders/<int:wid>/delete", methods=["POST"])
+@bp.route("/workorders/<int:wid>/delete", methods=["POST"])
 @login_required
 @require_role("root")
 def workorder_delete(wid: int):
@@ -376,7 +383,7 @@ def workorder_delete(wid: int):
     return redirect(url_for("maintenance.workorders_list"))
 
 # Быстрая форма по QR: /maintenance/form?eq=CODE&tpl=TPL
-@maintenance_bp.route("/form")
+@bp.route("/form")
 @login_required
 def form_qr():
     code = request.args.get("eq")
