@@ -23,7 +23,8 @@
 - если есть current_diameter и min_diameter у инструмента, при INSTALL проверяем, что не ниже min_diameter.
 """
 from datetime import datetime
-from typing import Optional
+from decimal import Decimal
+from typing import Dict, List, Optional
 
 from flask_login import current_user
 from sqlalchemy import UniqueConstraint
@@ -77,10 +78,113 @@ class Tooling(db.Model):
     # ------ Утилиты агрегирования (аналог твоего STOCK/PARTS листа) ------
     @property
     def last_event(self):
-        return (ToolingEvent.query
-                .filter_by(tool_id=self.id)
-                .order_by(ToolingEvent.happened_at.desc())
-                .first())
+        return (
+            ToolingEvent.query
+            .filter_by(tool_id=self.id)
+            .order_by(ToolingEvent.happened_at.desc(), ToolingEvent.id.desc())
+            .first()
+        )
+
+    @property
+    def current_dim(self) -> Optional[float]:
+        """Return the latest known dimension for the tool."""
+
+        dimension = self._current_dimension_decimal()
+        return float(dimension) if dimension is not None else None
+
+    def dim_history(self) -> List[Dict[str, Optional[object]]]:
+        """Return chronological history of dimension changes."""
+
+        events = (
+            ToolingEvent.query.filter(
+                ToolingEvent.tool_id == self.id,
+                ToolingEvent.new_dimension.isnot(None),
+            )
+            .order_by(ToolingEvent.happened_at.asc(), ToolingEvent.id.asc())
+            .all()
+        )
+
+        history: List[Dict[str, Optional[object]]] = []
+        for event in events:
+            history.append(
+                {
+                    "when": event.happened_at,
+                    "action": event.action,
+                    "before": float(event.dimension) if event.dimension is not None else None,
+                    "after": float(event.new_dimension) if event.new_dimension is not None else None,
+                    "note": event.note,
+                }
+            )
+        return history
+
+    def mark_serviced(
+        self,
+        action: str,
+        new_dim: Optional[float],
+        note: Optional[str] = None,
+    ) -> "ToolingEvent":
+        """Create a service completion event and return it."""
+
+        normalized_action = (action or "").upper()
+        if normalized_action not in {"WASH", "POLISH", "INSPECT", "REPAIR", "REGRIND"}:
+            raise ValueError("Unsupported service action")
+
+        if normalized_action == "REGRIND" and new_dim is None:
+            raise ValueError("REGRIND requires new_dim")
+        if normalized_action != "REGRIND" and new_dim is not None:
+            raise ValueError("Only REGRIND may specify new_dim")
+
+        dimension_before = self._current_dimension_decimal()
+        new_dimension_value: Optional[Decimal] = None
+        if normalized_action == "REGRIND" and new_dim is not None:
+            new_dimension_value = Decimal(str(new_dim))
+
+        event = ToolingEvent(
+            user_name=(getattr(current_user, "username", None) or "system"),
+            machine_id=None,
+            machine_name=None,
+            shift=None,
+            happened_at=datetime.utcnow(),
+            action=normalized_action,
+            reason="Regrind" if normalized_action == "REGRIND" else "Service completed",
+            note=note,
+            role=None,
+            position=None,
+            slot_id=None,
+            dimension=dimension_before,
+            new_dimension=new_dimension_value,
+            tool_id=self.id,
+            batch_no=self.tool_code,
+            from_status="NEED_SERVICE",
+            to_status="STOCK",
+        )
+
+        if normalized_action == "REGRIND":
+            self.regrind_count = (self.regrind_count or 0) + 1
+            if new_dimension_value is not None:
+                self.current_diameter = new_dimension_value
+        elif dimension_before is not None:
+            self.current_diameter = dimension_before
+
+        db.session.add(event)
+        return event
+
+    def _current_dimension_decimal(self) -> Optional[Decimal]:
+        events = (
+            ToolingEvent.query
+            .filter_by(tool_id=self.id)
+            .order_by(ToolingEvent.happened_at.desc(), ToolingEvent.id.desc())
+            .all()
+        )
+        for event in events:
+            if event.new_dimension is not None:
+                return event.new_dimension
+        for event in events:
+            if event.dimension is not None:
+                return event.dimension
+        if self.current_diameter is not None:
+            return Decimal(str(self.current_diameter))
+        return None
 
     def last_aggregate(self):
         """

@@ -4,22 +4,26 @@
 {% block content %}
 <h1 class="mb-3">Tool {{ item.tool_code }} — история событий</h1>
 
-<div class="d-flex gap-2 mb-3">
+<div class="d-flex gap-2 mb-3 flex-wrap">
   <a class="btn btn-outline-secondary" href="{{ url_for('tooling.list_tooling') }}">← К списку</a>
 
+  {% if from_service %}
+    <a class="btn btn-outline-dark" href="{{ url_for('tooling.report_service') }}">← Назад к отчёту по сервису</a>
+  {% endif %}
+
   {% if prev_id %}
-    <a class="btn btn-outline-primary" href="{{ url_for('tooling.tooling_detail', tool_id=prev_id) }}">⟵ Предыдущий</a>
+    <a class="btn btn-outline-primary" href="{{ url_for('tooling.tooling_detail', tool_id=prev_id, from_service=1 if from_service else None) }}">⟵ Предыдущий</a>
   {% else %}
     <button class="btn btn-outline-primary" disabled>⟵ Предыдущий</button>
   {% endif %}
 
   {% if next_id %}
-    <a class="btn btn-outline-primary" href="{{ url_for('tooling.tooling_detail', tool_id=next_id) }}">Следующий ⟶</a>
+    <a class="btn btn-outline-primary" href="{{ url_for('tooling.tooling_detail', tool_id=next_id, from_service=1 if from_service else None) }}">Следующий ⟶</a>
   {% else %}
     <button class="btn btn-outline-primary" disabled>Следующий ⟶</button>
   {% endif %}
 
-  <a class="btn btn-primary" href="{{ url_for('tooling.tooling_event') }}">➕ Новое событие</a>
+  <a class="btn btn-primary" href="{{ url_for('tooling.tooling_event', from_service=1 if from_service else None) }}">➕ Новое событие</a>
   <a class="btn btn-success" href="{{ url_for('tooling.export_tool_events', tool_id=item.id) }}">⬇ Экспорт событий CSV</a>
 </div>
 
@@ -34,11 +38,11 @@
   </div>
   <div class="col-12 col-md-3">
     <div class="small text-muted">Текущий DIM</div>
-    <div class="fw-semibold">{{ item.current_diameter if item.current_diameter is not none else '—' }}</div>
+    <div class="fw-semibold">{{ item.current_dim if item.current_dim is not none else '—' }}</div>
   </div>
   <div class="col-12 col-md-3">
     <div class="small text-muted">Статус</div>
-    <div class="fw-semibold">{{ item.status or '—' }}</div>
+    <div class="fw-semibold">{{ status or '—' }}</div>
   </div>
 </div>
 
@@ -82,4 +86,34 @@
     </tbody>
   </table>
 </div>
+
+<h2 class="h4 mt-4">История DIM</h2>
+{% if dim_history %}
+  <div class="table-responsive">
+    <table class="table table-sm table-striped align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Когда</th>
+          <th>Действие</th>
+          <th>Было</th>
+          <th>Стало</th>
+          <th>Примечание</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in dim_history %}
+        <tr>
+          <td class="text-nowrap">{{ row.when.strftime('%Y-%m-%d %H:%M:%S') if row.when else '' }}</td>
+          <td>{{ row.action }}</td>
+          <td>{{ row.before if row.before is not none else '' }}</td>
+          <td>{{ row.after if row.after is not none else '' }}</td>
+          <td class="text-break">{{ row.note or '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <p class="text-muted">Изменений размера ещё нет.</p>
+{% endif %}
 {% endblock %}
